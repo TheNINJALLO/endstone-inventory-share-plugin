@@ -194,6 +194,30 @@ class InventorySharePlugin(Plugin):
                     enchants = {}
                 set_item_with_meta(inv, int(slot_str), item_type, int(amount), name, lore, int(damage), enchants)
 
+        cursor.execute("SELECT player_enderchest FROM player_data WHERE player_xuid = %s", (target.xuid,))
+        result = cursor.fetchone()
+
+        if result and result[0]:
+            inventory_data = result[0]
+            matches = re.findall(
+                r'§eitem_slot:(-?\d+)\s+item:(\S+)\s+amount:(\d+)\s+name:(\S+)\s+lore:(None|\[.*?\])\s+damage:(\d+)\s+enchants:({.*?})',
+                inventory_data,
+                re.DOTALL
+            )
+
+            enderchest = self.server.get_player(target.name).ender_chest
+            enderchest.clear()
+
+            for slot_str, item_type, amount, name, lore, damage, enchants_str in matches:
+                if item_type == "None":
+                    continue
+
+                try:
+                    enchants = ast.literal_eval(enchants_str)
+                except Exception:
+                    enchants = {}
+                set_item_with_meta(enderchest, int(slot_str), item_type, int(amount), name, lore, int(damage), enchants)
+
         cursor.close()
         conn.close()
 
@@ -227,6 +251,24 @@ class InventorySharePlugin(Plugin):
                 )
 
                 cursor.execute("UPDATE player_data SET player_inv = %s WHERE player_xuid = %s", (output, target.xuid))
+
+                enderchest = self.server.get_player(target.name).ender_chest
+                enderchest_items = [get_item_data(enderchest.get_item(i), i) for i in range(27)]
+
+                enderchest_output = "".join(
+                    f"{'-' * 20}\n"
+                    f"{ColorFormat.YELLOW}item_slot:{i['num']} \n"
+                    f" item:{i['item']} \n"
+                    f" amount:{i['amount']} \n"
+                    f" name:{i['name']} \n"
+                    f" lore:{i['lore']} \n"
+                    f" damage:{i['damage']} \n"
+                    f" enchants:{i['enchants']} \n"
+                    for i in enderchest_items
+                )
+
+                cursor.execute("UPDATE player_data SET player_enderchest = %s WHERE player_xuid = %s", (enderchest_output, target.xuid))
+
                 conn.commit()
                 self.logger.info('Save inventory')
 
