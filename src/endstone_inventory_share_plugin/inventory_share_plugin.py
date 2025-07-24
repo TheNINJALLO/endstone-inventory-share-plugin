@@ -235,7 +235,7 @@ class InventorySharePlugin(Plugin):
 
             try:
                 inv = self.server.get_player(target.name).inventory
-                all_items = [get_item_data(inv.get_item(i), i) for i in range(36)]
+                all_items = [get_item_data(inv.get_item(i), i) for i in range(target.inventory.size)]
                 all_items += [get_item_data(getattr(inv, slot), idx) for idx, slot in zip(range(-1, -6, -1), ['helmet', 'chestplate', 'leggings', 'boots', 'item_in_off_hand'])]
 
                 output = "".join(
@@ -253,7 +253,7 @@ class InventorySharePlugin(Plugin):
                 cursor.execute("UPDATE player_data SET player_inv = %s WHERE player_xuid = %s", (output, target.xuid))
 
                 enderchest = self.server.get_player(target.name).ender_chest
-                enderchest_items = [get_item_data(enderchest.get_item(i), i) for i in range(27)]
+                enderchest_items = [get_item_data(enderchest.get_item(i), i) for i in range(target.ender_chest.size)]
 
                 enderchest_output = "".join(
                     f"{'-' * 20}\n"
