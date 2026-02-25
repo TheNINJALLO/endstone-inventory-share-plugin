@@ -1,23 +1,58 @@
-# Inventory share plugin
-This is an inventory sharing plugin between multiple servers that uses SQL available in [Endstone](https://github.com/EndstoneMC/endstone "Endstone")
+# Inventory Share Plugin
 
-[日本語版](https://github.com/Kuma3mccm/inventory-share-plugin/blob/master/README_JP.md)
+A multi-server inventory sharing plugin for [Endstone](https://github.com/EndstoneMC/endstone) that uses MySQL to synchronize player inventories across servers.
 
-I think it isn't optimized because it's my first plugin.
+## Features
 
-## How to use
-1. Put the executable file downloaded from the [latest release](https://github.com/Kuma3mccm/inventory-share-plugin/releases/latest) into the plugins folder of Endstone and start the server once.
-2. Since`plugins/inventory_share_plugin/config.toml` is generated, I will change the content myself.
-3. Execute `create_db.sql` to create a database and tables in SQL.
+- **Full inventory sync** — Main inventory, armor, and offhand items are saved and restored across servers
+- **Ender chest sync** — Ender chest contents are shared between servers
+- **Complete NBT preservation** — All item data is preserved, including:
+  - Enchantments
+  - Custom names and lore
+  - Shulker box contents
+  - Damage / durability
+  - Repair cost, unbreakable flags, and all other NBT data
+- **Double-login protection** — Prevents players from connecting to multiple servers simultaneously
+
+## Setup
+
+1. Place the `.whl` file into your Endstone server's `plugins` folder and start the server once.
+2. Edit the generated config at `plugins/inventory_share_plugin/config.toml` with your MySQL connection details.
+3. Run `create_db.sql` on your MySQL server to create the database and tables.
 4. Restart or reload the server.
-5. :partying_face: 
+5. 🎉
 
-## Note 
-This plugin is still in the development stage.\
-We cannot be held responsible for any losses incurred from using this plugin. 
-## Milestone
-- [x] Share the contents of the Ender Chest. (1.4.0)
-## Known Issues 
-- Items that require NBT do not record NBT.
+## Configuration
 
-inventory-share-plugin by Kuma3mccm is licensed under the Apache License, Version2.0
+Edit `plugins/inventory_share_plugin/config.toml`:
+
+```toml
+sql_host = "your-mysql-host.com"
+sql_port = "3306"
+sql_user = "your_user"
+sql_pass = "your_password"
+sql_db_name = "player_data"
+```
+
+## Upgrading from v1.x
+
+v2.0.0 uses a new JSON-based storage format with full NBT data. If you are upgrading from v1.x, run the following SQL on your database:
+
+```sql
+ALTER TABLE player_data
+  MODIFY player_inv MEDIUMTEXT,
+  MODIFY player_enderchest MEDIUMTEXT;
+
+-- Clear old incompatible data (players will start with empty inventories on first join)
+UPDATE player_data SET player_inv = NULL, player_enderchest = NULL;
+```
+
+## Requirements
+
+- [Endstone](https://github.com/EndstoneMC/endstone) (API 0.11+)
+- MySQL server
+- Python packages: `PyMySQL`, `pycryptodome`
+
+## License
+
+inventory-share-plugin by Kuma3mccm is licensed under the Apache License, Version 2.0

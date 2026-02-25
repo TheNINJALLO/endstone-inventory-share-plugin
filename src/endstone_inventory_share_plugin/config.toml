@@ -1,14 +1,14 @@
-#ip
-sql_host = "exanple.com"
+# MySQL host address
+sql_host = "example.com"
 
-#user
-sql_port = "1433"
+# MySQL port
+sql_port = "3306"
 
-#user
+# MySQL user
 sql_user = "user"
 
-#pass
+# MySQL password
 sql_pass = "pass"
 
-#dbname
+# Database name
 sql_db_name = "player_data"
