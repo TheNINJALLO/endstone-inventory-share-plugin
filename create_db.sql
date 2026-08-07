@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS player_data (
     player_enderchest MEDIUMTEXT DEFAULT NULL,
     is_logged_in TINYTEXT DEFAULT 'False',
     unresolved_items MEDIUMTEXT DEFAULT NULL,
-+    player_xp_level INT DEFAULT 0,
-    player_xp_progress FLOAT DEFAULT 0.0
+    player_xp_level INT DEFAULT 0,
+    player_xp_progress FLOAT DEFAULT 0.0,
+    player_money_score INT DEFAULT 0,
+    player_tags MEDIUMTEXT DEFAULT NULL,
+    player_locations MEDIUMTEXT DEFAULT NULL,
+    player_bundles MEDIUMTEXT DEFAULT NULL
 );

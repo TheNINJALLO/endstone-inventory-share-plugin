@@ -12,6 +12,8 @@ A multi-server inventory sharing plugin for [Endstone](https://github.com/Endsto
   - Shulker box contents
   - Damage / durability
   - Repair cost, unbreakable flags, and all other NBT data
+- **Scoreboard sync** — The "Money" scoreboard objective score is saved and restored across servers
+- **Player tag sync** — All player tags (set via `/tag`) are saved and restored across servers
 - **Double-login protection** — Prevents players from connecting to multiple servers simultaneously
 
 ## Setup

@@ -1,0 +1,37 @@
+{
+    "format_version": 2,
+    "header": {
+        "name": "InvShare Bundle Companion",
+        "description": "Companion addon for the Endstone Inventory Share plugin. Reads bundle contents via the Script API and relays them to Endstone for cross-server synchronization.",
+        "uuid": "a3b7c1d5-e9f0-4a2b-8c6d-1e3f5a7b9d0c",
+        "version": [
+            2,
+            7,
+            2
+        ],
+        "min_engine_version": [
+            1,
+            21,
+            40
+        ]
+    },
+    "modules": [
+        {
+            "type": "script",
+            "language": "javascript",
+            "uuid": "f1e2d3c4-b5a6-4789-0abc-def123456789",
+            "entry": "scripts/main.js",
+            "version": [
+                2,
+                7,
+                2
+            ]
+        }
+    ],
+    "dependencies": [
+        {
+            "module_name": "@minecraft/server",
+            "version": "beta"
+        }
+    ]
+}
