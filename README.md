@@ -20,8 +20,9 @@
 </p>
 
 <p align="center">
-  <a href="#overview">Overview</a> &bull;
-  <a href="#compatibility">Compatibility</a> &bull;
+  <a href="#what-it-does">What it does</a> &bull;
+  <a href="#how-to-use">How to use</a> &bull;
+  <a href="#commands-and-permissions">Commands</a> &bull;
   <a href="#install">Install</a> &bull;
   <a href="https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases">Releases</a>
 </p>
@@ -30,9 +31,22 @@
 
 Multi-server inventory sharing for Endstone 0.11.8. This release is aligned with Endstone 0.11.8 and Minecraft Bedrock Dedicated Server 1.26.40, and is distributed as a Python wheel for direct installation in an Endstone server.
 
-## Capabilities
+## What it does
 
--
+- Synchronizes player inventory and ender-chest contents across multiple Endstone servers.
+- Preserves full item NBT in a shared MySQL database and coordinates login/join/quit save and load timing.
+- Includes conflict handling and migration support for older storage formats.
+
+## How to use
+
+1. Run `create_db.sql` against a dedicated MySQL database using a least-privilege database account.
+2. Start each server once, then add the same database connection settings to its local `config.toml`; never commit the password.
+3. Restart all participating servers and test with a non-production player moving between two servers.
+4. Stop or transfer players cleanly before database maintenance so the latest inventory is written.
+
+## Commands and permissions
+
+This plugin has no player commands. Inventory synchronization runs automatically during login, join, periodic updates, and disconnect events after the shared MySQL connection is configured.
 
 ## Compatibility
 
