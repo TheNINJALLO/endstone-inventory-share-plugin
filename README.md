@@ -1,6 +1,6 @@
 <!-- endstone-professional-header:start -->
 <p align="center">
-  <img src="docs/assets/banner.svg" width="100%" alt="Endstone Inventory Share &mdash; Multi-server inventory sharing for Endstone 0.11.8">
+  <img src="docs/assets/banner.svg" width="100%" alt="Endstone Inventory Share &mdash; Multi-server inventory sharing for Endstone 0.11.9">
 </p>
 
 <p align="center">
@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <img alt="Endstone 0.11.8" src="https://img.shields.io/badge/Endstone-0.11.8-52b7a8?style=flat-square">
+  <img alt="Endstone 0.11.9" src="https://img.shields.io/badge/Endstone-0.11.9-52b7a8?style=flat-square">
   <img alt="API 0.11" src="https://img.shields.io/badge/API-0.11-63b8ff?style=flat-square">
-  <img alt="BDS 1.26.40" src="https://img.shields.io/badge/BDS-1.26.40-8b7dff?style=flat-square">
+  <img alt="BDS 1.26.44" src="https://img.shields.io/badge/BDS-1.26.44-8b7dff?style=flat-square">
   <img alt="Python >=3.10" src="https://img.shields.io/badge/Python-%3E=3.10-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white">
 </p>
 
 <p align="center">
-  <strong>Multi-server inventory sharing for Endstone 0.11.8.</strong>
+  <strong>Multi-server inventory sharing for Endstone 0.11.9.</strong>
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 
 ## Overview
 
-Multi-server inventory sharing for Endstone 0.11.8. This release is aligned with Endstone 0.11.8 and Minecraft Bedrock Dedicated Server 1.26.40, and is distributed as a Python wheel for direct installation in an Endstone server.
+Multi-server inventory sharing for Endstone 0.11.9. This release is aligned with Endstone 0.11.9 and Minecraft Bedrock Dedicated Server 1.26.44, and is distributed as a Python wheel for direct installation in an Endstone server.
 
 ## What it does
 
@@ -52,24 +52,24 @@ This plugin has no player commands. Inventory synchronization runs automatically
 
 | Component | Supported version |
 |---|---|
-| Endstone | `0.11.8` |
+| Endstone | `0.11.9` |
 | Endstone API | `0.11` |
-| Bedrock Dedicated Server | `1.26.40` |
+| Bedrock Dedicated Server | `1.26.44` |
 | Python | `>=3.10` |
-| Plugin release | `v2.7.3` |
+| Plugin release | `v2.7.4` |
 
 ## Install
 
 Download the wheel from the matching GitHub release:
 
 ```bash
-gh release download v2.7.3 --repo TheNINJALLO/endstone-inventory-share-plugin --pattern "*.whl"
+gh release download v2.7.4 --repo TheNINJALLO/endstone-inventory-share-plugin --pattern "*.whl"
 ```
 
 Copy the downloaded wheel into the server's `plugins/` directory, remove any older wheel for the same plugin, and restart Endstone.
 
 > [!IMPORTANT]
-> Use Endstone `0.11.8` with BDS `1.26.40`. Back up worlds and plugin data before upgrading a production server.
+> Use Endstone `0.11.9` with BDS `1.26.44`. Back up worlds and plugin data before upgrading a production server.
 
 ## Configuration and secrets
 
