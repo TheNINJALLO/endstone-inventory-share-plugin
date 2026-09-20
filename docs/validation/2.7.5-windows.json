@@ -1,6 +1,6 @@
 {
   "platform": "win32",
-  "wheel_sha256": "fca4aef51d82d916249ceaf201813d4d7204bdcac6e100c3f77faa7e17a7818c",
+  "wheel_sha256": "37ccf5091f75b42a5456782c9ac026e5cdfb7782a4b933e46aa34d629fbca648",
   "phases": [
     {
       "passed": true,
@@ -1387,11 +1387,13 @@
     "skipped": 0,
     "mysql_tests": 11
   },
+  "ci_build_commit": "96f7603cfd4fb92936c8432932b9abfead0a719d",
+  "ci_build_url": "https://github.com/TheNINJALLO/endstone-inventory-share-plugin/actions/runs/35520288917",
   "shutdown_log": [
-    "[11:37:17 INFO]: [InvshareProbe] Captured 1 inventory snapshot(s) before stop.",
-    "[11:37:17 INFO]: Server stop requested.",
-    "[11:37:17 INFO]: [InvshareProbe] Disabling invshare_probe v1.0.0",
-    "[11:37:17 INFO]: [InvshareProbe] Flushing inventory snapshots before shutdown...",
-    "[11:37:17 INFO]: [InvshareProbe] Inventory shutdown flush complete; no pending saves."
+    "[11:41:18 INFO]: [InvshareProbe] Captured 1 inventory snapshot(s) before stop.",
+    "[11:41:18 INFO]: Server stop requested.",
+    "[11:41:18 INFO]: [InvshareProbe] Disabling invshare_probe v1.0.0",
+    "[11:41:18 INFO]: [InvshareProbe] Flushing inventory snapshots before shutdown...",
+    "[11:41:18 INFO]: [InvshareProbe] Inventory shutdown flush complete; no pending saves."
   ]
 }
