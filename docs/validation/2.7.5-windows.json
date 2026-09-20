@@ -1,0 +1,1397 @@
+{
+  "platform": "win32",
+  "wheel_sha256": "fca4aef51d82d916249ceaf201813d4d7204bdcac6e100c3f77faa7e17a7818c",
+  "phases": [
+    {
+      "passed": true,
+      "phase": "seed",
+      "expected": {
+        "xuid": "",
+        "inv_json": [
+          {
+            "slot": 0,
+            "type": "minecraft:diamond",
+            "amount": 37,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": 1,
+            "type": null
+          },
+          {
+            "slot": 2,
+            "type": null
+          },
+          {
+            "slot": 3,
+            "type": null
+          },
+          {
+            "slot": 4,
+            "type": null
+          },
+          {
+            "slot": 5,
+            "type": null
+          },
+          {
+            "slot": 6,
+            "type": null
+          },
+          {
+            "slot": 7,
+            "type": null
+          },
+          {
+            "slot": 8,
+            "type": "minecraft:diamond_sword",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {
+                "Damage": {
+                  "_type": "int",
+                  "value": 7
+                },
+                "display": {
+                  "_type": "compound",
+                  "value": {
+                    "Lore": {
+                      "_type": "list",
+                      "value": [
+                        {
+                          "_type": "string",
+                          "value": "NBT lifecycle regression"
+                        }
+                      ]
+                    },
+                    "Name": {
+                      "_type": "string",
+                      "value": "Survives restart"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "slot": 9,
+            "type": null
+          },
+          {
+            "slot": 10,
+            "type": null
+          },
+          {
+            "slot": 11,
+            "type": null
+          },
+          {
+            "slot": 12,
+            "type": null
+          },
+          {
+            "slot": 13,
+            "type": null
+          },
+          {
+            "slot": 14,
+            "type": null
+          },
+          {
+            "slot": 15,
+            "type": null
+          },
+          {
+            "slot": 16,
+            "type": null
+          },
+          {
+            "slot": 17,
+            "type": null
+          },
+          {
+            "slot": 18,
+            "type": null
+          },
+          {
+            "slot": 19,
+            "type": null
+          },
+          {
+            "slot": 20,
+            "type": null
+          },
+          {
+            "slot": 21,
+            "type": null
+          },
+          {
+            "slot": 22,
+            "type": null
+          },
+          {
+            "slot": 23,
+            "type": null
+          },
+          {
+            "slot": 24,
+            "type": null
+          },
+          {
+            "slot": 25,
+            "type": null
+          },
+          {
+            "slot": 26,
+            "type": null
+          },
+          {
+            "slot": 27,
+            "type": null
+          },
+          {
+            "slot": 28,
+            "type": null
+          },
+          {
+            "slot": 29,
+            "type": null
+          },
+          {
+            "slot": 30,
+            "type": null
+          },
+          {
+            "slot": 31,
+            "type": null
+          },
+          {
+            "slot": 32,
+            "type": null
+          },
+          {
+            "slot": 33,
+            "type": null
+          },
+          {
+            "slot": 34,
+            "type": null
+          },
+          {
+            "slot": 35,
+            "type": null
+          },
+          {
+            "slot": -1,
+            "type": "minecraft:diamond_helmet",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": -2,
+            "type": null
+          },
+          {
+            "slot": -3,
+            "type": null
+          },
+          {
+            "slot": -4,
+            "type": null
+          },
+          {
+            "slot": -5,
+            "type": "minecraft:shield",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          }
+        ],
+        "ec_json": [
+          {
+            "slot": 0,
+            "type": null
+          },
+          {
+            "slot": 1,
+            "type": null
+          },
+          {
+            "slot": 2,
+            "type": null
+          },
+          {
+            "slot": 3,
+            "type": null
+          },
+          {
+            "slot": 4,
+            "type": "minecraft:emerald",
+            "amount": 34,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": 5,
+            "type": null
+          },
+          {
+            "slot": 6,
+            "type": null
+          },
+          {
+            "slot": 7,
+            "type": null
+          },
+          {
+            "slot": 8,
+            "type": null
+          },
+          {
+            "slot": 9,
+            "type": null
+          },
+          {
+            "slot": 10,
+            "type": null
+          },
+          {
+            "slot": 11,
+            "type": null
+          },
+          {
+            "slot": 12,
+            "type": null
+          },
+          {
+            "slot": 13,
+            "type": null
+          },
+          {
+            "slot": 14,
+            "type": null
+          },
+          {
+            "slot": 15,
+            "type": null
+          },
+          {
+            "slot": 16,
+            "type": null
+          },
+          {
+            "slot": 17,
+            "type": null
+          },
+          {
+            "slot": 18,
+            "type": null
+          },
+          {
+            "slot": 19,
+            "type": null
+          },
+          {
+            "slot": 20,
+            "type": null
+          },
+          {
+            "slot": 21,
+            "type": null
+          },
+          {
+            "slot": 22,
+            "type": null
+          },
+          {
+            "slot": 23,
+            "type": null
+          },
+          {
+            "slot": 24,
+            "type": null
+          },
+          {
+            "slot": 25,
+            "type": null
+          },
+          {
+            "slot": 26,
+            "type": null
+          }
+        ],
+        "xp_level": 23,
+        "xp_progress": 0.25,
+        "money_score": 0,
+        "tags": [
+          "restart_checked"
+        ]
+      },
+      "shutdown_database_verified": true,
+      "server_exit": 0
+    },
+    {
+      "passed": true,
+      "phase": "restore",
+      "restored": {
+        "xuid": "",
+        "inv_json": [
+          {
+            "slot": 0,
+            "type": "minecraft:diamond",
+            "amount": 37,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": 1,
+            "type": null
+          },
+          {
+            "slot": 2,
+            "type": null
+          },
+          {
+            "slot": 3,
+            "type": null
+          },
+          {
+            "slot": 4,
+            "type": null
+          },
+          {
+            "slot": 5,
+            "type": null
+          },
+          {
+            "slot": 6,
+            "type": null
+          },
+          {
+            "slot": 7,
+            "type": null
+          },
+          {
+            "slot": 8,
+            "type": "minecraft:diamond_sword",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {
+                "Damage": {
+                  "_type": "int",
+                  "value": 7
+                },
+                "display": {
+                  "_type": "compound",
+                  "value": {
+                    "Lore": {
+                      "_type": "list",
+                      "value": [
+                        {
+                          "_type": "string",
+                          "value": "NBT lifecycle regression"
+                        }
+                      ]
+                    },
+                    "Name": {
+                      "_type": "string",
+                      "value": "Survives restart"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "slot": 9,
+            "type": null
+          },
+          {
+            "slot": 10,
+            "type": null
+          },
+          {
+            "slot": 11,
+            "type": null
+          },
+          {
+            "slot": 12,
+            "type": null
+          },
+          {
+            "slot": 13,
+            "type": null
+          },
+          {
+            "slot": 14,
+            "type": null
+          },
+          {
+            "slot": 15,
+            "type": null
+          },
+          {
+            "slot": 16,
+            "type": null
+          },
+          {
+            "slot": 17,
+            "type": null
+          },
+          {
+            "slot": 18,
+            "type": null
+          },
+          {
+            "slot": 19,
+            "type": null
+          },
+          {
+            "slot": 20,
+            "type": null
+          },
+          {
+            "slot": 21,
+            "type": null
+          },
+          {
+            "slot": 22,
+            "type": null
+          },
+          {
+            "slot": 23,
+            "type": null
+          },
+          {
+            "slot": 24,
+            "type": null
+          },
+          {
+            "slot": 25,
+            "type": null
+          },
+          {
+            "slot": 26,
+            "type": null
+          },
+          {
+            "slot": 27,
+            "type": null
+          },
+          {
+            "slot": 28,
+            "type": null
+          },
+          {
+            "slot": 29,
+            "type": null
+          },
+          {
+            "slot": 30,
+            "type": null
+          },
+          {
+            "slot": 31,
+            "type": null
+          },
+          {
+            "slot": 32,
+            "type": null
+          },
+          {
+            "slot": 33,
+            "type": null
+          },
+          {
+            "slot": 34,
+            "type": null
+          },
+          {
+            "slot": 35,
+            "type": null
+          },
+          {
+            "slot": -1,
+            "type": "minecraft:diamond_helmet",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": -2,
+            "type": null
+          },
+          {
+            "slot": -3,
+            "type": null
+          },
+          {
+            "slot": -4,
+            "type": null
+          },
+          {
+            "slot": -5,
+            "type": "minecraft:shield",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          }
+        ],
+        "ec_json": [
+          {
+            "slot": 0,
+            "type": null
+          },
+          {
+            "slot": 1,
+            "type": null
+          },
+          {
+            "slot": 2,
+            "type": null
+          },
+          {
+            "slot": 3,
+            "type": null
+          },
+          {
+            "slot": 4,
+            "type": "minecraft:emerald",
+            "amount": 34,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": 5,
+            "type": null
+          },
+          {
+            "slot": 6,
+            "type": null
+          },
+          {
+            "slot": 7,
+            "type": null
+          },
+          {
+            "slot": 8,
+            "type": null
+          },
+          {
+            "slot": 9,
+            "type": null
+          },
+          {
+            "slot": 10,
+            "type": null
+          },
+          {
+            "slot": 11,
+            "type": null
+          },
+          {
+            "slot": 12,
+            "type": null
+          },
+          {
+            "slot": 13,
+            "type": null
+          },
+          {
+            "slot": 14,
+            "type": null
+          },
+          {
+            "slot": 15,
+            "type": null
+          },
+          {
+            "slot": 16,
+            "type": null
+          },
+          {
+            "slot": 17,
+            "type": null
+          },
+          {
+            "slot": 18,
+            "type": null
+          },
+          {
+            "slot": 19,
+            "type": null
+          },
+          {
+            "slot": 20,
+            "type": null
+          },
+          {
+            "slot": 21,
+            "type": null
+          },
+          {
+            "slot": 22,
+            "type": null
+          },
+          {
+            "slot": 23,
+            "type": null
+          },
+          {
+            "slot": 24,
+            "type": null
+          },
+          {
+            "slot": 25,
+            "type": null
+          },
+          {
+            "slot": 26,
+            "type": null
+          }
+        ],
+        "xp_level": 23,
+        "xp_progress": 0.25,
+        "money_score": 0,
+        "tags": [
+          "restart_checked"
+        ]
+      },
+      "shutdown_database_verified": true,
+      "server_exit": 0
+    },
+    {
+      "passed": true,
+      "phase": "crash",
+      "expected": {
+        "xuid": "",
+        "inv_json": [
+          {
+            "slot": 0,
+            "type": "minecraft:diamond",
+            "amount": 45,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": 1,
+            "type": null
+          },
+          {
+            "slot": 2,
+            "type": null
+          },
+          {
+            "slot": 3,
+            "type": null
+          },
+          {
+            "slot": 4,
+            "type": null
+          },
+          {
+            "slot": 5,
+            "type": null
+          },
+          {
+            "slot": 6,
+            "type": null
+          },
+          {
+            "slot": 7,
+            "type": null
+          },
+          {
+            "slot": 8,
+            "type": "minecraft:diamond_sword",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {
+                "Damage": {
+                  "_type": "int",
+                  "value": 7
+                },
+                "display": {
+                  "_type": "compound",
+                  "value": {
+                    "Lore": {
+                      "_type": "list",
+                      "value": [
+                        {
+                          "_type": "string",
+                          "value": "NBT lifecycle regression"
+                        }
+                      ]
+                    },
+                    "Name": {
+                      "_type": "string",
+                      "value": "Survives restart"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "slot": 9,
+            "type": null
+          },
+          {
+            "slot": 10,
+            "type": null
+          },
+          {
+            "slot": 11,
+            "type": null
+          },
+          {
+            "slot": 12,
+            "type": null
+          },
+          {
+            "slot": 13,
+            "type": null
+          },
+          {
+            "slot": 14,
+            "type": null
+          },
+          {
+            "slot": 15,
+            "type": null
+          },
+          {
+            "slot": 16,
+            "type": null
+          },
+          {
+            "slot": 17,
+            "type": null
+          },
+          {
+            "slot": 18,
+            "type": null
+          },
+          {
+            "slot": 19,
+            "type": null
+          },
+          {
+            "slot": 20,
+            "type": null
+          },
+          {
+            "slot": 21,
+            "type": null
+          },
+          {
+            "slot": 22,
+            "type": null
+          },
+          {
+            "slot": 23,
+            "type": null
+          },
+          {
+            "slot": 24,
+            "type": null
+          },
+          {
+            "slot": 25,
+            "type": null
+          },
+          {
+            "slot": 26,
+            "type": null
+          },
+          {
+            "slot": 27,
+            "type": null
+          },
+          {
+            "slot": 28,
+            "type": null
+          },
+          {
+            "slot": 29,
+            "type": null
+          },
+          {
+            "slot": 30,
+            "type": null
+          },
+          {
+            "slot": 31,
+            "type": null
+          },
+          {
+            "slot": 32,
+            "type": null
+          },
+          {
+            "slot": 33,
+            "type": null
+          },
+          {
+            "slot": 34,
+            "type": null
+          },
+          {
+            "slot": 35,
+            "type": null
+          },
+          {
+            "slot": -1,
+            "type": "minecraft:diamond_helmet",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": -2,
+            "type": null
+          },
+          {
+            "slot": -3,
+            "type": null
+          },
+          {
+            "slot": -4,
+            "type": null
+          },
+          {
+            "slot": -5,
+            "type": "minecraft:shield",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          }
+        ],
+        "ec_json": [
+          {
+            "slot": 0,
+            "type": null
+          },
+          {
+            "slot": 1,
+            "type": null
+          },
+          {
+            "slot": 2,
+            "type": null
+          },
+          {
+            "slot": 3,
+            "type": null
+          },
+          {
+            "slot": 4,
+            "type": "minecraft:emerald",
+            "amount": 42,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": 5,
+            "type": null
+          },
+          {
+            "slot": 6,
+            "type": null
+          },
+          {
+            "slot": 7,
+            "type": null
+          },
+          {
+            "slot": 8,
+            "type": null
+          },
+          {
+            "slot": 9,
+            "type": null
+          },
+          {
+            "slot": 10,
+            "type": null
+          },
+          {
+            "slot": 11,
+            "type": null
+          },
+          {
+            "slot": 12,
+            "type": null
+          },
+          {
+            "slot": 13,
+            "type": null
+          },
+          {
+            "slot": 14,
+            "type": null
+          },
+          {
+            "slot": 15,
+            "type": null
+          },
+          {
+            "slot": 16,
+            "type": null
+          },
+          {
+            "slot": 17,
+            "type": null
+          },
+          {
+            "slot": 18,
+            "type": null
+          },
+          {
+            "slot": 19,
+            "type": null
+          },
+          {
+            "slot": 20,
+            "type": null
+          },
+          {
+            "slot": 21,
+            "type": null
+          },
+          {
+            "slot": 22,
+            "type": null
+          },
+          {
+            "slot": 23,
+            "type": null
+          },
+          {
+            "slot": 24,
+            "type": null
+          },
+          {
+            "slot": 25,
+            "type": null
+          },
+          {
+            "slot": 26,
+            "type": null
+          }
+        ],
+        "xp_level": 23,
+        "xp_progress": 0.25,
+        "money_score": 0,
+        "tags": [
+          "restart_checked"
+        ]
+      },
+      "server_exit": 1
+    },
+    {
+      "passed": true,
+      "phase": "restore",
+      "restored": {
+        "xuid": "",
+        "inv_json": [
+          {
+            "slot": 0,
+            "type": "minecraft:diamond",
+            "amount": 45,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": 1,
+            "type": null
+          },
+          {
+            "slot": 2,
+            "type": null
+          },
+          {
+            "slot": 3,
+            "type": null
+          },
+          {
+            "slot": 4,
+            "type": null
+          },
+          {
+            "slot": 5,
+            "type": null
+          },
+          {
+            "slot": 6,
+            "type": null
+          },
+          {
+            "slot": 7,
+            "type": null
+          },
+          {
+            "slot": 8,
+            "type": "minecraft:diamond_sword",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {
+                "Damage": {
+                  "_type": "int",
+                  "value": 7
+                },
+                "display": {
+                  "_type": "compound",
+                  "value": {
+                    "Lore": {
+                      "_type": "list",
+                      "value": [
+                        {
+                          "_type": "string",
+                          "value": "NBT lifecycle regression"
+                        }
+                      ]
+                    },
+                    "Name": {
+                      "_type": "string",
+                      "value": "Survives restart"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "slot": 9,
+            "type": null
+          },
+          {
+            "slot": 10,
+            "type": null
+          },
+          {
+            "slot": 11,
+            "type": null
+          },
+          {
+            "slot": 12,
+            "type": null
+          },
+          {
+            "slot": 13,
+            "type": null
+          },
+          {
+            "slot": 14,
+            "type": null
+          },
+          {
+            "slot": 15,
+            "type": null
+          },
+          {
+            "slot": 16,
+            "type": null
+          },
+          {
+            "slot": 17,
+            "type": null
+          },
+          {
+            "slot": 18,
+            "type": null
+          },
+          {
+            "slot": 19,
+            "type": null
+          },
+          {
+            "slot": 20,
+            "type": null
+          },
+          {
+            "slot": 21,
+            "type": null
+          },
+          {
+            "slot": 22,
+            "type": null
+          },
+          {
+            "slot": 23,
+            "type": null
+          },
+          {
+            "slot": 24,
+            "type": null
+          },
+          {
+            "slot": 25,
+            "type": null
+          },
+          {
+            "slot": 26,
+            "type": null
+          },
+          {
+            "slot": 27,
+            "type": null
+          },
+          {
+            "slot": 28,
+            "type": null
+          },
+          {
+            "slot": 29,
+            "type": null
+          },
+          {
+            "slot": 30,
+            "type": null
+          },
+          {
+            "slot": 31,
+            "type": null
+          },
+          {
+            "slot": 32,
+            "type": null
+          },
+          {
+            "slot": 33,
+            "type": null
+          },
+          {
+            "slot": 34,
+            "type": null
+          },
+          {
+            "slot": 35,
+            "type": null
+          },
+          {
+            "slot": -1,
+            "type": "minecraft:diamond_helmet",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": -2,
+            "type": null
+          },
+          {
+            "slot": -3,
+            "type": null
+          },
+          {
+            "slot": -4,
+            "type": null
+          },
+          {
+            "slot": -5,
+            "type": "minecraft:shield",
+            "amount": 1,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          }
+        ],
+        "ec_json": [
+          {
+            "slot": 0,
+            "type": null
+          },
+          {
+            "slot": 1,
+            "type": null
+          },
+          {
+            "slot": 2,
+            "type": null
+          },
+          {
+            "slot": 3,
+            "type": null
+          },
+          {
+            "slot": 4,
+            "type": "minecraft:emerald",
+            "amount": 42,
+            "data": 0,
+            "nbt": {
+              "_type": "compound",
+              "value": {}
+            }
+          },
+          {
+            "slot": 5,
+            "type": null
+          },
+          {
+            "slot": 6,
+            "type": null
+          },
+          {
+            "slot": 7,
+            "type": null
+          },
+          {
+            "slot": 8,
+            "type": null
+          },
+          {
+            "slot": 9,
+            "type": null
+          },
+          {
+            "slot": 10,
+            "type": null
+          },
+          {
+            "slot": 11,
+            "type": null
+          },
+          {
+            "slot": 12,
+            "type": null
+          },
+          {
+            "slot": 13,
+            "type": null
+          },
+          {
+            "slot": 14,
+            "type": null
+          },
+          {
+            "slot": 15,
+            "type": null
+          },
+          {
+            "slot": 16,
+            "type": null
+          },
+          {
+            "slot": 17,
+            "type": null
+          },
+          {
+            "slot": 18,
+            "type": null
+          },
+          {
+            "slot": 19,
+            "type": null
+          },
+          {
+            "slot": 20,
+            "type": null
+          },
+          {
+            "slot": 21,
+            "type": null
+          },
+          {
+            "slot": 22,
+            "type": null
+          },
+          {
+            "slot": 23,
+            "type": null
+          },
+          {
+            "slot": 24,
+            "type": null
+          },
+          {
+            "slot": 25,
+            "type": null
+          },
+          {
+            "slot": 26,
+            "type": null
+          }
+        ],
+        "xp_level": 23,
+        "xp_progress": 0.25,
+        "money_score": 0,
+        "tags": [
+          "restart_checked"
+        ]
+      },
+      "shutdown_database_verified": true,
+      "server_exit": 0
+    }
+  ],
+  "endstone": "0.11.11",
+  "bds": "1.26.51.1",
+  "python": "3.11.9",
+  "database": "MariaDB 11.4",
+  "automated_tests": {
+    "passed": 30,
+    "skipped": 0,
+    "mysql_tests": 11
+  },
+  "shutdown_log": [
+    "[11:37:17 INFO]: [InvshareProbe] Captured 1 inventory snapshot(s) before stop.",
+    "[11:37:17 INFO]: Server stop requested.",
+    "[11:37:17 INFO]: [InvshareProbe] Disabling invshare_probe v1.0.0",
+    "[11:37:17 INFO]: [InvshareProbe] Flushing inventory snapshots before shutdown...",
+    "[11:37:17 INFO]: [InvshareProbe] Inventory shutdown flush complete; no pending saves."
+  ]
+}

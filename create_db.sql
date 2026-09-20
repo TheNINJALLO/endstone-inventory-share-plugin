@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS player_data (
     player_xuid VARCHAR(64) PRIMARY KEY,
     player_inv MEDIUMTEXT DEFAULT NULL,
     player_enderchest MEDIUMTEXT DEFAULT NULL,
-    is_logged_in TINYTEXT DEFAULT 'False',
+    is_logged_in TINYINT NOT NULL DEFAULT 0,
+    session_token VARCHAR(36) DEFAULT NULL,
     unresolved_items MEDIUMTEXT DEFAULT NULL,
     player_xp_level INT DEFAULT 0,
     player_xp_progress FLOAT DEFAULT 0.0,
@@ -17,4 +18,4 @@ CREATE TABLE IF NOT EXISTS player_data (
     player_tags MEDIUMTEXT DEFAULT NULL,
     player_locations MEDIUMTEXT DEFAULT NULL,
     player_bundles MEDIUMTEXT DEFAULT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

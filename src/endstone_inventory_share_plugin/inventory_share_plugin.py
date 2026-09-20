@@ -1,15 +1,20 @@
 import os
 import json
 import pymysql
-import threading
+from pathlib import Path
+from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
 
-from endstone import ColorFormat
 from endstone.level import Location
-from endstone.event import event_handler, PlayerLoginEvent, PlayerJoinEvent, PlayerQuitEvent, ScriptMessageEvent
+from endstone.event import (
+    event_handler, EventPriority, PlayerLoginEvent, PlayerJoinEvent,
+    PlayerQuitEvent, PlayerCommandEvent, ServerCommandEvent, ScriptMessageEvent,
+)
 from endstone.inventory import ItemStack
 from endstone.plugin import Plugin
 from endstone.scoreboard import Criteria
+
+from .persistence import InventoryStore, SnapshotJournal, SessionBusy, StaleSession, recover_pending
 
 # Endstone 0.11 exports NBT tag classes from endstone.nbt.
 from endstone.nbt import (
@@ -132,14 +137,11 @@ def serialize_item(item, slot_num, logger=None):
                 nbt_dict = sanitize_for_json(nbt_to_dict(nbt_tag))
                 result["nbt"] = nbt_dict
         except Exception as nbt_err:
-            if logger:
-                logger.warning(f"[Inventory Save] Could not serialize NBT for slot {slot_num}: {nbt_err}")
+            raise ValueError(f"Could not serialize NBT for slot {slot_num}") from nbt_err
 
         return result
     except Exception as e:
-        if logger:
-            logger.warning(f"[Inventory Save] Failed to serialize slot {slot_num}: {e}")
-        return {"slot": slot_num, "type": None}
+        raise ValueError(f"Failed to serialize slot {slot_num}: {e}") from e
 
 
 def deserialize_item(item_data, logger=None, context=""):
@@ -171,6 +173,7 @@ def deserialize_item(item_data, logger=None, context=""):
                 logger.warning(
                     f"[Inventory Load] Could not restore NBT for '{item_type}'{context}: {nbt_err}"
                 )
+            return None  # Keep the original payload in the unresolved-items vault.
 
     return item
 
@@ -315,9 +318,10 @@ def load_container_from_json(json_str, container, logger=None, server=None, play
 
 def connect_db(host, port, user, password, db_name):
     """Open a MySQL connection and select the database."""
-    conn = pymysql.connect(host=host, port=int(port), user=user, password=password, charset="utf8mb4")
+    conn = pymysql.connect(host=host, port=int(port), user=user, password=password,
+                           database=db_name, charset="utf8mb4", connect_timeout=5,
+                           read_timeout=5, write_timeout=5)
     cursor = conn.cursor()
-    cursor.execute(f"USE `{db_name}`")
     return conn, cursor
 
 
@@ -326,6 +330,7 @@ _REQUIRED_COLUMNS = [
     ("player_inv",          "player_inv MEDIUMTEXT DEFAULT NULL"),
     ("player_enderchest",   "player_enderchest MEDIUMTEXT DEFAULT NULL"),
     ("is_logged_in",        "is_logged_in TINYINT DEFAULT 0"),
+    ("session_token",       "session_token VARCHAR(36) DEFAULT NULL"),
     ("unresolved_items",    "unresolved_items MEDIUMTEXT DEFAULT NULL"),
     ("player_xp_level",     "player_xp_level INT DEFAULT 0"),
     ("player_xp_progress",  "player_xp_progress FLOAT DEFAULT 0.0"),
@@ -356,7 +361,14 @@ class InventorySharePlugin(Plugin):
         self._bundle_cache = {}
         self._bundle_chunks = {}
         self._loading_players = set()
-        self._kicked_players = set()
+        self._sessions = {}
+        self._ready_players = set()
+        self._pending_autosaves = {}
+        self._stopping = False
+        self._accepting = False
+        self._autosave_task = None
+        self.journal = None
+        self.store = None
 
     # -----------------------------------------------------------------------
     # Config
@@ -369,6 +381,7 @@ class InventorySharePlugin(Plugin):
         self.sql_pass = self.config["sql_pass"]
         self.sql_db_name = self.config["sql_db_name"]
         self.server_name = self._get_server_name()
+        self.autosave_seconds = max(5, int(self.config.get("autosave_seconds", 30)))
 
     def _get_server_name(self):
         """Extract the server-name from server.properties."""
@@ -387,52 +400,9 @@ class InventorySharePlugin(Plugin):
     # Login status tracking
     # -----------------------------------------------------------------------
 
-    def set_login_status(self, xuid, status: bool):
-        """Update the player's login-status flag in the database."""
-        try:
-            conn, cursor = connect_db(
-                self.sql_host, self.sql_port, self.sql_user,
-                self.sql_pass, self.sql_db_name
-            )
-
-            cursor.execute(
-                "SELECT is_logged_in FROM player_data WHERE player_xuid = %s", (xuid,)
-            )
-            result = cursor.fetchone()
-
-            if result:
-                cursor.execute(
-                    "UPDATE player_data SET is_logged_in = %s WHERE player_xuid = %s",
-                    (1 if status else 0, xuid),
-                )
-            else:
-                cursor.execute(
-                    "INSERT INTO player_data (player_xuid, is_logged_in) VALUES (%s, %s)",
-                    (xuid, 1 if status else 0),
-                )
-
-            conn.commit()
-            cursor.close()
-            conn.close()
-        except Exception as e:
-            self.logger.error(f"Failed to update login status for {xuid}: {e}")
-
-    def get_login_status(self, xuid) -> bool:
-        """Check whether a player is flagged as logged-in on another server."""
-        try:
-            conn, cursor = connect_db(
-                self.sql_host, self.sql_port, self.sql_user,
-                self.sql_pass, self.sql_db_name
-            )
-            cursor.execute(
-                "SELECT is_logged_in FROM player_data WHERE player_xuid = %s", (xuid,)
-            )
-            result = cursor.fetchone()
-            conn.close()
-            return result[0] == 1 if result else False
-        except Exception as e:
-            self.logger.error(f"Failed to get login status for {xuid}: {e}")
-            return False
+    def _connect(self):
+        return connect_db(self.sql_host, self.sql_port, self.sql_user,
+                          self.sql_pass, self.sql_db_name)
 
     # -----------------------------------------------------------------------
     # Scoreboard helpers
@@ -457,35 +427,6 @@ class InventorySharePlugin(Plugin):
     # -----------------------------------------------------------------------
     # Save / Load vault (unresolved items)
     # -----------------------------------------------------------------------
-
-    def _load_vault(self, xuid):
-        """Load the unresolved items vault from the database for a player."""
-        try:
-            conn, cursor = connect_db(
-                self.sql_host, self.sql_port, self.sql_user,
-                self.sql_pass, self.sql_db_name
-            )
-            cursor.execute(
-                "SELECT unresolved_items FROM player_data WHERE player_xuid = %s",
-                (xuid,),
-            )
-            result = cursor.fetchone()
-            cursor.close()
-            conn.close()
-            if result and result[0]:
-                return json.loads(result[0])
-        except Exception as e:
-            self.logger.warning(f"[Vault] Could not load vault for {xuid}: {e}")
-        return {"inventory": [], "enderchest": []}
-
-    def _save_vault(self, xuid, vault_data, cursor):
-        """Write the unresolved items vault to the database."""
-        has_items = bool(vault_data.get("inventory") or vault_data.get("enderchest"))
-        vault_json = json.dumps(vault_data, ensure_ascii=False) if has_items else None
-        cursor.execute(
-            "UPDATE player_data SET unresolved_items = %s WHERE player_xuid = %s",
-            (vault_json, xuid),
-        )
 
     # -----------------------------------------------------------------------
     # Shared save helper
@@ -513,7 +454,7 @@ class InventorySharePlugin(Plugin):
         xp_level = player.exp_level
         xp_progress = player.exp_progress
 
-        money_score = 0
+        money_score = None
         try:
             money_obj = self._get_or_create_money_objective()
             if money_obj is not None:
@@ -538,7 +479,7 @@ class InventorySharePlugin(Plugin):
             "enderchest": ec_still_vaulted,
         }
 
-        bundle_data = self._bundle_cache.pop(name, None)
+        bundle_data = self._bundle_cache.get(name)
 
         return {
             "xuid": xuid,
@@ -555,110 +496,58 @@ class InventorySharePlugin(Plugin):
             "bundle_data": bundle_data,
         }
 
-    def _save_player_data_async(self, data):
-        """Background thread method to save extracted player data to the DB."""
-        xuid = data["xuid"]
-        name = data["name"]
-
+    def _persist_snapshot(self, xuid, token, data, release=False):
         try:
-            conn, cursor = connect_db(
-                self.sql_host, self.sql_port, self.sql_user,
-                self.sql_pass, self.sql_db_name
+            self.store.save(xuid, token, data, release=release)
+            if release:
+                self.journal.remove(token)
+                self.logger.info(f"Saved and released inventory for {xuid}")
+            return True
+        except StaleSession as error:
+            self.journal.remove(token)
+            self.logger.warning(str(error))
+        except Exception as error:
+            self.logger.error(
+                f"Inventory save pending for {xuid}: {error}. "
+                "The local recovery snapshot is retained; the shared login lock stays held."
             )
+        return False
 
-            cursor.execute(
-                "UPDATE player_data SET player_inv = %s WHERE player_xuid = %s",
-                (data["inv_json"], xuid),
-            )
-
-            cursor.execute(
-                "UPDATE player_data SET player_enderchest = %s WHERE player_xuid = %s",
-                (data["ec_json"], xuid),
-            )
-
-            cursor.execute(
-                "UPDATE player_data SET player_xp_level = %s, player_xp_progress = %s WHERE player_xuid = %s",
-                (data["xp_level"], data["xp_progress"], xuid),
-            )
-
-            cursor.execute(
-                "SELECT player_money_score FROM player_data WHERE player_xuid = %s",
-                (xuid,),
-            )
-            db_money = cursor.fetchone()
-            db_money_val = db_money[0] if db_money and db_money[0] is not None else 0
-
-            if data["money_score"] != 0 or db_money_val == 0:
-                cursor.execute(
-                    "UPDATE player_data SET player_money_score = %s WHERE player_xuid = %s",
-                    (data["money_score"], xuid),
-                )
-
-            tags = data["tags"]
-            cursor.execute(
-                "SELECT player_tags FROM player_data WHERE player_xuid = %s",
-                (xuid,),
-            )
-            db_tag_result = cursor.fetchone()
-            db_has_tags = db_tag_result and db_tag_result[0] is not None and db_tag_result[0] != ''
-
-            if tags:
-                tags_json = json.dumps(tags, ensure_ascii=False)
-                cursor.execute(
-                    "UPDATE player_data SET player_tags = %s WHERE player_xuid = %s",
-                    (tags_json, xuid),
-                )
-            elif not db_has_tags:
-                cursor.execute(
-                    "UPDATE player_data SET player_tags = %s WHERE player_xuid = %s",
-                    (None, xuid),
-                )
-
-            self._save_vault(xuid, data["updated_vault"], cursor)
-
-            cursor.execute(
-                "SELECT player_locations FROM player_data WHERE player_xuid = %s",
-                (xuid,),
-            )
-            loc_result = cursor.fetchone()
-            try:
-                locations = json.loads(loc_result[0]) if loc_result and loc_result[0] else {}
-            except Exception:
-                locations = {}
-            
-            locations[self.server_name] = data["current_location"]
-            locations_json = json.dumps(locations, ensure_ascii=False)
-            
-            cursor.execute(
-                "UPDATE player_data SET player_locations = %s WHERE player_xuid = %s",
-                (locations_json, xuid),
-            )
-
-            bundle_data = data.get("bundle_data")
-            if bundle_data is not None:
-                bundle_json = json.dumps(bundle_data, ensure_ascii=False)
-                cursor.execute(
-                    "UPDATE player_data SET player_bundles = %s WHERE player_xuid = %s",
-                    (bundle_json, xuid),
-                )
-
-            conn.commit()
-
-            if data["vaulted_count"] > 0:
-                self.logger.info(f"Saved inventory for {name} ({data['vaulted_count']} item(s) still in vault)")
-            else:
-                self.logger.info(f"Saved inventory for {name}")
-
-        except Exception as e:
-            self.logger.error(f"Failed to save inventory to DB for {name}: {e}")
-        finally:
-            if 'cursor' in locals(): cursor.close()
-            if 'conn' in locals(): conn.close()
-
-    def _save_player_sync(self, player):
-        """Synchronous save used only during server shutdown."""
+    def _queue_snapshot(self, player, token, *, release=False):
+        # Called on the server thread, including the quit event, while the player
+        # is still accessible. Never send Player/Inventory/ItemStack to workers.
         data = self._extract_player_data(player)
-        self._save_player_data_async(data)
+        self.journal.put(token, player.xuid, data)
+        return self.executor.submit(self._persist_snapshot, player.xuid, token, data, release)
+
+    def _finish_session(self, player, token):
+        if token in self._ready_players:
+            try:
+                self._queue_snapshot(player, token, release=True)
+                return
+            except Exception as error:
+                self.logger.error(f"Final inventory capture failed for {player.name}: {error}; "
+                                  "preserving the last complete snapshot.")
+        # A player who never finished restoring must not overwrite the database
+        # with the local world's empty/partial inventory.
+        data = next((data for saved_token, _, data in self.journal.entries()
+                     if saved_token == token), None)
+        self.executor.submit(self._persist_snapshot, player.xuid, token, data, True)
+
+    def _autosave(self):
+        if self._stopping:
+            return
+        for player in self.server.online_players:
+            token = self._sessions.get(player.xuid)
+            if token not in self._ready_players:
+                continue
+            pending = self._pending_autosaves.get(token)
+            if pending is not None and not pending.done():
+                continue
+            try:
+                self._pending_autosaves[token] = self._queue_snapshot(player, token)
+            except Exception as error:
+                self.logger.error(f"Inventory snapshot failed for {player.name}: {error}")
 
     # -----------------------------------------------------------------------
     # Schema bootstrap
@@ -673,10 +562,11 @@ class InventorySharePlugin(Plugin):
                 user=self.sql_user,
                 password=self.sql_pass,
                 charset="utf8mb4",
+                connect_timeout=5, read_timeout=5, write_timeout=5,
             )
         except Exception as e:
             self.logger.error(f"[Schema] Cannot connect to MySQL: {e}")
-            return
+            raise
 
         cursor = conn.cursor()
 
@@ -726,12 +616,25 @@ class InventorySharePlugin(Plugin):
                             f"[Schema] Added missing column '{col_name}' to player_data."
                         )
                     except Exception as alter_err:
-                        self.logger.warning(
-                            f"[Schema] Could not add column '{col_name}': {alter_err}"
-                        )
+                        raise RuntimeError(f"Cannot add required column {col_name}") from alter_err
 
+            cursor.execute("SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
+                           "WHERE TABLE_SCHEMA=%s AND TABLE_NAME='player_data' "
+                           "AND COLUMN_NAME='is_logged_in'", (self.sql_db_name,))
+            if cursor.fetchone()[0] != "tinyint":
+                cursor.execute("UPDATE player_data SET is_logged_in = CASE "
+                               "WHEN LOWER(CAST(is_logged_in AS CHAR)) IN ('true','1') "
+                               "THEN '1' ELSE '0' END")
+                cursor.execute("ALTER TABLE player_data MODIFY is_logged_in TINYINT NOT NULL DEFAULT 0")
+                conn.commit()
+            cursor.execute("SELECT ENGINE FROM INFORMATION_SCHEMA.TABLES "
+                           "WHERE TABLE_SCHEMA=%s AND TABLE_NAME='player_data'", (self.sql_db_name,))
+            if cursor.fetchone()[0].lower() != "innodb":
+                raise RuntimeError("player_data must use InnoDB for atomic inventory saves; "
+                                   "convert its storage engine before starting Inventory Share")
         except Exception as e:
             self.logger.error(f"[Schema] Schema bootstrap failed: {e}")
+            raise
         finally:
             cursor.close()
             conn.close()
@@ -741,161 +644,133 @@ class InventorySharePlugin(Plugin):
     # -----------------------------------------------------------------------
 
     def on_enable(self):
-        self.logger.info(
-            f"{ColorFormat.AQUA}InventorySharePlugin enabled (v2.7.2, API 0.11.6)!{ColorFormat.RESET}"
-        )
         self.save_default_config()
         self.load_config()
-
-        self.executor = ThreadPoolExecutor(max_workers=5)
-        self._ensure_schema()
-
-        for player in self.server.online_players:
-            self.set_login_status(player.xuid, True)
-
         self.register_events(self)
+        # All DB jobs share one FIFO queue, including claim/load and final saves.
+        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="invshare")
+        try:
+            self.journal = SnapshotJournal(Path(self.data_folder) / "pending-inventories.sqlite3")
+            self.store = InventoryStore(self._connect, self.server_name)
+            self._ensure_schema()
+            if recover_pending(self.store, self.journal, self.logger):
+                raise RuntimeError("Pending inventories could not be recovered")
+        except Exception as error:
+            self.logger.error(f"Inventory Share is not ready: {error}. Fix MySQL and restart; logins are blocked.")
+            return
+        self._accepting = True
+        self._autosave_task = self.server.scheduler.run_task(
+            self, self._autosave, delay=self.autosave_seconds * 20,
+            period=self.autosave_seconds * 20,
+        )
+        self.logger.info(f"InventorySharePlugin v2.7.5 enabled; autosave every {self.autosave_seconds}s")
+        for player in self.server.online_players:
+            # Hot enabling must use the same claim/restore path as a fresh join.
+            self._begin_join(player)
 
     def on_disable(self):
-        self.logger.info("Saving all online player inventories before shutdown...")
-        for player in self.server.online_players:
-            try:
-                self._save_player_sync(player)
-            except Exception as e:
-                self.logger.error(f"Failed to save {player.name} during shutdown: {e}")
-            self.set_login_status(player.xuid, False)
-        
-        if self.executor:
+        self._stopping = True
+        self._accepting = False
+        if self._autosave_task is not None:
+            self._autosave_task.cancel()
+        self.logger.info("Flushing inventory snapshots before shutdown...")
+        if self.executor is not None:
+            for player in self.server.online_players:
+                token = self._sessions.pop(player.xuid, None)
+                if token:
+                    self._finish_session(player, token)
+            # The final snapshots are queued AFTER older saves. Quit-event jobs
+            # are drained even when Endstone has already removed every player.
             self.executor.shutdown(wait=True)
-
-        self.logger.info(
-            f"{ColorFormat.AQUA}InventorySharePlugin disabled!{ColorFormat.RESET}"
-        )
-
-    # -----------------------------------------------------------------------
-    # Events
-    # -----------------------------------------------------------------------
+            self.executor = None
+        if self.store is not None and self.journal is not None:
+            remaining = recover_pending(self.store, self.journal, self.logger)
+            if remaining:
+                self.logger.error(f"Shutdown retained {remaining} pending inventory session(s) "
+                                  "in pending-inventories.sqlite3; recovery runs before the next login.")
+            else:
+                self.logger.info("Inventory shutdown flush complete; no pending saves.")
 
     @event_handler
     def on_player_login(self, event: PlayerLoginEvent):
-        """Prevent double-login across servers safely."""
-        target = event.player
-        xuid = target.xuid
-        name = target.name
-        
-        def check_login_task():
-            try:
-                conn, cursor = connect_db(
-                    self.sql_host, self.sql_port, self.sql_user,
-                    self.sql_pass, self.sql_db_name
-                )
-                
-                cursor.execute(
-                    "SELECT is_logged_in FROM player_data WHERE player_xuid = %s", (xuid,)
-                )
-                result = cursor.fetchone()
-                is_logged_in = result[0] == 1 if result else False
-                
-                if is_logged_in:
-                    self._kicked_players.add(xuid)
-                    def kick_player():
-                        p = self.server.get_player(name)
-                        if p:
-                            p.kick("You cannot connect because you are already logged in on another server.")
-                    self.server.scheduler.run_task(self, kick_player)
-                else:
-                    if result:
-                        cursor.execute(
-                            "UPDATE player_data SET is_logged_in = 1 WHERE player_xuid = %s",
-                            (xuid,),
-                        )
-                    else:
-                        cursor.execute(
-                            "INSERT INTO player_data (player_xuid, is_logged_in) VALUES (%s, 1)",
-                            (xuid,),
-                        )
-                    conn.commit()
-                cursor.close()
-                conn.close()
-            except Exception as e:
-                self.logger.error(f"Failed to check login status for {name}: {e}")
+        if not self._accepting or self._stopping:
+            event.is_cancelled = True
+            event.kick_message = "Inventory storage is unavailable. Please try again after the server is ready."
 
-        if self.executor:
-            self.executor.submit(check_login_task)
+    def _before_stop_command(self, command):
+        if command.strip().lstrip("/").lower() not in ("stop", "minecraft:stop"):
+            return
+        if not self._accepting or self._stopping:
+            return
+        captured = 0
+        for player in self.server.online_players:
+            token = self._sessions.get(player.xuid)
+            if token not in self._ready_players:
+                continue
+            try:
+                # BDS can remove players without QuitEvent before on_disable.
+                # Capture here, but keep ownership until shutdown actually runs:
+                # another plugin/command permission check may still reject stop.
+                self._queue_snapshot(player, token)
+                captured += 1
+            except Exception as error:
+                self.logger.error(f"Pre-stop inventory capture failed for {player.name}: {error}")
+        self.logger.info(f"Captured {captured} inventory snapshot(s) before stop.")
+
+    @event_handler(priority=EventPriority.MONITOR, ignore_cancelled=True)
+    def on_server_command(self, event: ServerCommandEvent):
+        self._before_stop_command(event.command)
+
+    @event_handler(priority=EventPriority.MONITOR, ignore_cancelled=True)
+    def on_player_command(self, event: PlayerCommandEvent):
+        if event.player.is_op:
+            self._before_stop_command(event.command)
 
     @event_handler
     def on_player_join(self, event: PlayerJoinEvent):
         """Restore the player's inventory and ender chest safely from the database."""
-        target = event.player
-        name = target.name
-        xuid = target.xuid
+        self._begin_join(event.player)
 
+    def _begin_join(self, target):
+        name, xuid = target.name, target.xuid
+        if not self._accepting or self._stopping:
+            target.kick("Inventory storage is unavailable. Please try again later.")
+            return
+        token = str(uuid4())
+        try:
+            # The marker permits recovery even if the process exits immediately
+            # after claiming the SQL row, before its first inventory snapshot.
+            self.journal.put(token, xuid)
+        except Exception as error:
+            self.logger.error(f"Cannot journal inventory session for {name}: {error}")
+            target.kick("Inventory storage is unavailable. Please try again later.")
+            return
+        self._sessions[xuid] = token
         self._loading_players.add(xuid)
+        self._bundle_cache.pop(name, None)
+
+        def fail_join(error):
+            self.logger.error(f"Failed to load inventory for {name}: {error}")
+            def kick():
+                if self._sessions.get(xuid) == token and not self._stopping:
+                    p = self.server.get_player(name)
+                    if p:
+                        p.kick("Your shared inventory could not be loaded safely. Please try again later.")
+            if not self._stopping:
+                self.server.scheduler.run_task(self, kick)
 
         def load_inventory_task():
             try:
-                conn, cursor = connect_db(
-                    self.sql_host, self.sql_port, self.sql_user,
-                    self.sql_pass, self.sql_db_name
-                )
-
-                cursor.execute(
-                    "SELECT is_logged_in FROM player_data WHERE player_xuid = %s",
-                    (xuid,),
-                )
-                result = cursor.fetchone()
-                if result:
-                    cursor.execute(
-                        "UPDATE player_data SET is_logged_in = 1 WHERE player_xuid = %s",
-                        (xuid,),
-                    )
-                else:
-                    cursor.execute(
-                        "INSERT INTO player_data (player_xuid, is_logged_in) VALUES (%s, 1)",
-                        (xuid,),
-                    )
-
-                db_vault_data = {}
-                cursor.execute("SELECT unresolved_items FROM player_data WHERE player_xuid = %s", (xuid,))
-                res = cursor.fetchone()
-                if res and res[0]:
-                    try:
-                        db_vault_data = json.loads(res[0])
-                    except Exception:
-                        db_vault_data = {}
-                
-                cursor.execute("SELECT player_inv FROM player_data WHERE player_xuid = %s", (xuid,))
-                inv_res = cursor.fetchone()
-                inv_json = inv_res[0] if inv_res else None
-
-                cursor.execute("SELECT player_enderchest FROM player_data WHERE player_xuid = %s", (xuid,))
-                ec_res = cursor.fetchone()
-                ec_json = ec_res[0] if ec_res else None
-
-                cursor.execute("SELECT player_xp_level, player_xp_progress FROM player_data WHERE player_xuid = %s", (xuid,))
-                xp_res = cursor.fetchone()
-                
-                cursor.execute("SELECT player_money_score FROM player_data WHERE player_xuid = %s", (xuid,))
-                money_res = cursor.fetchone()
-
-                cursor.execute("SELECT player_tags FROM player_data WHERE player_xuid = %s", (xuid,))
-                tags_res = cursor.fetchone()
-
-                cursor.execute("SELECT player_locations FROM player_data WHERE player_xuid = %s", (xuid,))
-                loc_res = cursor.fetchone()
-                locations_json = loc_res[0] if loc_res else None
-
-                cursor.execute("SELECT player_bundles FROM player_data WHERE player_xuid = %s", (xuid,))
-                bundles_res = cursor.fetchone()
-                bundles_json = bundles_res[0] if bundles_res else None
-
-                conn.commit()
-                cursor.close()
-                conn.close()
+                row = self.store.claim(xuid, token)
+                db_vault_data = json.loads(row["unresolved_items"]) if row["unresolved_items"] else {}
+                inv_json, ec_json = row["player_inv"], row["player_enderchest"]
+                xp_res = (row["player_xp_level"], row["player_xp_progress"])
+                money_res, tags_res = (row["player_money_score"],), (row["player_tags"],)
+                locations_json, bundles_json = row["player_locations"], row["player_bundles"]
 
                 def apply_inventory_sync():
                     try:
-                        if xuid in self._kicked_players:
-                            self.logger.info(f"[Join Sync] Skipping inventory sync for {name} (player kicked).")
+                        if self._stopping or self._sessions.get(xuid) != token:
                             return
 
                         p = self.server.get_player(name)
@@ -914,7 +789,7 @@ class InventorySharePlugin(Plugin):
                                 )
                                 inv_unresolved.extend(new_unresolved)
                             except Exception as e:
-                                self.logger.error(f"Failed to restore inventory for {name}: {e}")
+                                raise RuntimeError(f"Failed to restore inventory for {name}") from e
                         
                         if ec_json:
                             try:
@@ -924,7 +799,7 @@ class InventorySharePlugin(Plugin):
                                 )
                                 ec_unresolved.extend(new_unresolved)
                             except Exception as e:
-                                self.logger.error(f"Failed to restore ender chest for {name}: {e}")
+                                raise RuntimeError(f"Failed to restore ender chest for {name}") from e
 
                         # Restore XP safely without redundant C++ mutations
                         if xp_res:
@@ -937,13 +812,13 @@ class InventorySharePlugin(Plugin):
                                     p.exp_progress = xp_progress
                                 self.logger.info(f"Restored XP for {p.name}: level={xp_level}, progress={xp_progress:.2f}")
                             except Exception as e:
-                                self.logger.error(f"Failed to restore XP for {name}: {e}")
+                                raise RuntimeError(f"Failed to restore XP for {name}") from e
 
                         # Restore Money score safely
                         if money_res:
                             try:
                                 db_money = money_res[0] if money_res[0] is not None else 0
-                                if db_money != 0:
+                                if db_money is not None:
                                     money_obj = self._get_or_create_money_objective()
                                     if money_obj is not None:
                                         score = money_obj.get_score(p)
@@ -970,7 +845,7 @@ class InventorySharePlugin(Plugin):
                                         
                                     self.logger.info(f"Restored {len(target_tags)} tag(s) for {p.name}: {list(target_tags)}")
                             except Exception as e:
-                                self.logger.error(f"Failed to restore tags for {name}: {e}")
+                                raise RuntimeError(f"Failed to restore tags for {name}") from e
 
                         # Restore Location safely
                         if locations_json:
@@ -1046,52 +921,34 @@ class InventorySharePlugin(Plugin):
                                     f"[Bundle Sync] Failed to dispatch bundle restore for {p.name}: {bundle_err}"
                                 )
 
-                    finally:
+                        self._ready_players.add(token)
                         self._loading_players.discard(xuid)
+                    except Exception as error:
+                        fail_join(error)
 
-                # Delay execution by 2 ticks (100ms) after PlayerJoinEvent
-                self.server.scheduler.run_task(self, apply_inventory_sync, delay=2)
+                if not self._stopping:
+                    self.server.scheduler.run_task(self, apply_inventory_sync, delay=2)
+            except SessionBusy as error:
+                self.journal.remove(token)
+                fail_join(error)
+            except Exception as error:
+                fail_join(error)
 
-            except Exception as e:
-                self._loading_players.discard(xuid)
-                self.logger.error(f"Failed to load inventory for player {name}: {e}")
-        
-        if self.executor:
-            self.executor.submit(load_inventory_task)
+        self.executor.submit(load_inventory_task)
 
     @event_handler
     def on_player_quit(self, event: PlayerQuitEvent):
-        """Save the player's inventory and ender chest to the database safely."""
         target = event.player
-        name = target.name
-        xuid = target.xuid
-
-        is_loading = xuid in self._loading_players
-        is_kicked = xuid in self._kicked_players
-
+        xuid, name = target.xuid, target.name
+        token = self._sessions.pop(xuid, None)
+        if token and self.executor is not None:
+            self._finish_session(target, token)
+        self._ready_players.discard(token)
+        self._pending_autosaves.pop(token, None)
         self._loading_players.discard(xuid)
-        self._kicked_players.discard(xuid)
-
-        if is_loading or is_kicked:
-            self.logger.warning(
-                f"[Inventory Save] Player {name} quit while inventory was loading or kicked — "
-                f"skipping save to protect database inventory from corruption."
-            )
-            if self.executor:
-                self.executor.submit(self.set_login_status, xuid, False)
-            return
-
-        try:
-            data = self._extract_player_data(target)
-            self._unresolved.pop(xuid, None)
-            
-            if self.executor:
-                self.executor.submit(self._save_player_data_async, data)
-                self.executor.submit(self.set_login_status, xuid, False)
-            else:
-                self.logger.error("Executor is not running, cannot save player async!")
-        except Exception as e:
-            self.logger.error(f"Failed to extract inventory for {name}: {e}")
+        self._unresolved.pop(xuid, None)
+        self._bundle_cache.pop(name, None)
+        self._bundle_chunks.pop(name, None)
 
     # -----------------------------------------------------------------------
     # Companion Addon Communication (ScriptMessageEvent)

@@ -1,26 +1,25 @@
-# Inventory share plugin
-[Endstone](https://github.com/EndstoneMC/endstone "Endstone")で使用できるSQLを使用した複数サーバー間でのインベントリ共有プラグインです。
+# Inventory Share v2.7.5
 
-[English](https://github.com/Kuma3mccm/inventory-share-plugin/blob/master/README.md)
+Endstone サーバー間でインベントリ、防具、オフハンド、エンダーチェスト、経験値などを MySQL/MariaDB に保存・共有するプラグインです。
 
-​
-初めてのプラグインなので最適化がされていないと思います。
-​
-## 使用方法
-1. Endstoneのpluginsフォルダに[最新のリリース](https://github.com/Kuma3mccm/inventory-share-plugin/releases/latest)からダウンロードした実行ファイルを入れ、一度サーバーを起動します。
-2. `plugins/inventory_share_plugin/config.toml`が生成されるので内容を自身で変更します。
-3. `create_db.sql`を実行してデータベースとテーブルを作成します。
-4. サーバーを再起動もしくはリロードします。
-5. :partying_face: 
+[English / 詳細な設定手順](README.md) · [リリース](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.5)
 
-## 注意
-このプラグインはまだ開発段階です。\
-このプラグインを使用して発生したいかなる損失も責任を負いかねます。
+## 再起動時の巻き戻り修正
 
-## 実装予定
-- [x] エンダーチェストの内部を共有する。(1.4.0)
+Bedrock はプラグインの終了処理より先にプレイヤーを削除する場合があります。v2.7.5 は `stop` コマンドの実行前にインベントリを取得し、保存が完了してからログインロックを解除します。通常の退出時と、既定で30秒ごとの定期保存にも対応します。
 
-## 既知の問題
-- NBTを必要とするアイテムはNBTが記録されません。
+最新の完全なスナップショットは `pending-inventories.sqlite3` に保持され、次回起動時にログイン受付前に復旧されます。データベースへの保存に失敗した場合、このファイルを削除しないでください。
 
-inventory-share-plugin by Kuma3mccm is licensed under the Apache License, Version2.0
+## 更新方法
+
+1. データベース、ワールド、プラグインのデータをバックアップします。
+2. 同じデータベースを使用する全サーバーを停止し、全ての古い wheel を v2.7.5 に置き換えます。旧バージョンとの混在運用はしないでください。
+3. 既存の設定とデータを残し、メンテナンス状態で起動してスキーマ更新を確認します。
+4. 旧バージョンのロックが残っている場合は [復旧ガイド](docs/recovery.md) を参照します。
+5. 管理パネルの再起動処理は `stop` を送信し、プロセス終了まで待つよう設定します。
+
+`config.toml` の `autosave_seconds = 30` で定期保存間隔を設定できます（最小5秒）。強制終了や電源断では最後の完全なスナップショット以降の変更を失う場合があります。既に失われたアイテムは、この更新だけでは復元できません。
+
+Endstone API 0.11、Python 3.10以上、InnoDB を使用する MySQL/MariaDB が必要です。実サーバー検証は Windows BDS 1.26.51.1 / Endstone 0.11.11 で実施しています。詳細と制限は [検証記録](docs/validation-2.7.5.md) を参照してください。
+
+Original plugin by Kuma3mccm. Apache License 2.0.

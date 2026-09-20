@@ -12,3 +12,5 @@ sql_pass = "pass"
 
 # Database name
 sql_db_name = "player_data"
+# Save complete inventory snapshots while players remain online (minimum 5 seconds).
+autosave_seconds = 30

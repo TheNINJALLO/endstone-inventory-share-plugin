@@ -29,6 +29,10 @@ credentials.*
 *.db
 *.db-shm
 *.db-wal
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
 *.log
 .idea/
 .vscode/
