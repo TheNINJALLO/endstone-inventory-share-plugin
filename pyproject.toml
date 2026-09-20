@@ -21,3 +21,7 @@ inventory-share-plugin = "endstone_inventory_share_plugin:InventorySharePlugin"
 pythonpath = ["src"]
 testpaths = ["tests"]
 markers = ["mysql: requires the disposable MySQL/MariaDB test database"]
+
+# Keep the same correctness checks locally and on newer CI Ruff releases.
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B023"]

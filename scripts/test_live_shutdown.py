@@ -92,9 +92,9 @@ def main():
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True, encoding="utf-8", errors="replace")
         lines = []
-        def reader():
-            for line in process.stdout:
-                lines.append(line)
+        def reader(current_process=process, current_lines=lines):
+            for line in current_process.stdout:
+                current_lines.append(line)
         thread = threading.Thread(target=reader, daemon=True)
         thread.start()
         client = None
