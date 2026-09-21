@@ -74,13 +74,19 @@ class SnapshotJournal:
             finally:
                 db.close()
 
-    def entries(self):
+    def entries(self, *, exclude_tokens=()):
         with self._lock:
             db = self._connect()
             try:
-                return [(token, xuid, json.loads(payload) if payload else None)
-                        for token, xuid, payload in
-                        db.execute("SELECT token,xuid,payload FROM pending ORDER BY rowid")]
+                entries = []
+                # Joins must not read/decode every online player's potentially
+                # large NBT snapshot just to recover a disconnected session.
+                for token, xuid in db.execute("SELECT token,xuid FROM pending ORDER BY rowid"):
+                    if token in exclude_tokens:
+                        continue
+                    payload = db.execute("SELECT payload FROM pending WHERE token=?", (token,)).fetchone()[0]
+                    entries.append((token, xuid, json.loads(payload) if payload else None))
+                return entries
             finally:
                 db.close()
 

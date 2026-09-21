@@ -590,7 +590,7 @@ class InventorySharePlugin(Plugin):
         # Snapshot the list on the main thread. Reading every journal record
         # later on the worker could erase a newly created login's marker.
         active = set(self._sessions.values())
-        entries = [entry for entry in self.journal.entries() if entry[0] not in active]
+        entries = self.journal.entries(exclude_tokens=active)
         if entries:
             self._recovery_future = self.executor.submit(
                 recover_pending, self.store, self.journal, self.logger, entries=entries,

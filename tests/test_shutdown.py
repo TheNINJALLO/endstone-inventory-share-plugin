@@ -170,6 +170,15 @@ def test_recovery_job_cannot_remove_a_later_login_marker(plugin, snapshot):
     assert plugin.journal.entries() == [("new", "123", None)]
 
 
+def test_join_recovery_does_not_decode_online_inventory_payloads(plugin, snapshot):
+    import sqlite3
+    plugin.journal.put("online", "123", snapshot)
+    plugin.journal.put("offline", "456", snapshot)
+    with sqlite3.connect(plugin.journal.path) as db:
+        db.execute("UPDATE pending SET payload='not decoded' WHERE token='online'")
+    assert plugin.journal.entries(exclude_tokens={"online"}) == [("offline", "456", snapshot)]
+
+
 def test_legacy_command_requires_console_and_offline_confirmation(plugin, monkeypatch):
     import endstone_inventory_share_plugin.inventory_share_plugin as module
 

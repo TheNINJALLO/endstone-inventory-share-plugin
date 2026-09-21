@@ -1,6 +1,6 @@
 # v2.7.6 validation
 
-The automated suite contains 51 tests, including 16 MariaDB integration cases. The original shutdown/recovery regressions remain included. New checks cover handoff and transient connection retries, bounded retry deadlines, legacy/auth error classification, cancellation on quit, optional-field preservation through disconnect/recovery, input protection while loading, pending-save recovery before reconnect, protection of newer journal markers, and safe console-only legacy recovery.
+The automated suite contains 52 tests, including 16 MariaDB integration cases. The original shutdown/recovery regressions remain included. New checks cover handoff and transient connection retries, bounded retry deadlines, legacy/auth error classification, cancellation on quit, optional-field preservation through disconnect/recovery, input protection while loading, pending-save recovery before reconnect, protection of newer journal markers, skipping active inventory payloads during join recovery, and safe console-only legacy recovery.
 
 ```powershell
 $env:INVSHARE_TEST_PORT = '33420'

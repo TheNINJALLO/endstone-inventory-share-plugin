@@ -72,6 +72,8 @@ invshare recoverlegacy AFFECTED_NUMERIC_XUID confirm-offline
 
 The command preserves inventory data and refuses to clear token-owned sessions or a player currently connected locally. The explicit `confirm-offline` argument means the operator has checked the other servers. It cannot prove an old server is offline remotely. Never use it to allow simultaneous sessions. Full procedure: [recovery guide](docs/recovery.md).
 
+If an optional XP, Money, or tags field fails to restore, that field remains unchanged in the database for the session. Changes to the affected field are not synchronized until its underlying error is fixed and it can be restored on a later join; the console identifies the field and cause.
+
 ## Restart and recovery behavior
 
 For panel restarts, configure the panel to send `stop` and wait for the process to exit. Successful shutdown logs `Inventory shutdown flush complete; no pending saves.` Database failures retain the local journal and the shared login lock. The owning server retries disconnected sessions during periodic saves and before reconnect; startup also recovers its journal before accepting logins.
