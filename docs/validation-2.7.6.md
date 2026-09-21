@@ -29,6 +29,6 @@ python scripts/test_live_shutdown.py --bds C:/fixtures/bds-1.26.51.1 `
   --database invshare_live_276 --join-cases
 ```
 
-See [v2.7.5 validation](validation-2.7.5.md) for fixture setup and the pinned client source. The eight phases passed on the development wheel; final release-wheel evidence will be added after CI artifact verification.
+See [v2.7.5 validation](validation-2.7.5.md) for fixture setup and the pinned client source. All eight phases passed on the final GitHub-built wheel. The exact wheel digest, phase results, and CI build provenance are recorded in [Windows results](validation/2.7.6-windows.json).
 
 This does not establish the exact cause of an individual production kick without its console error. It covers reproduced failure paths. The live fixture uses an offline scripted client, not a retail client, and does not cover production loads, Linux BDS, custom behavior packs, or arbitrary third-party inventory mutations. A genuinely active remote session or unavailable/corrupt inventory is still refused rather than overwritten.
