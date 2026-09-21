@@ -140,6 +140,58 @@ def test_capture_failure_keeps_last_complete_snapshot(plugin, snapshot):
     plugin.store.save.assert_called_once_with("123", "session", snapshot, release=True)
 
 
+def test_quit_preserves_optional_fields_after_removing_session_mapping(plugin, snapshot):
+    player = ready(plugin, snapshot)
+    plugin._preserved_fields["session"] = {"tags", "xp"}
+    plugin.on_player_quit(SimpleNamespace(player=player))
+    plugin.executor.submit(lambda: None).result(timeout=5)
+    saved = plugin.store.save.call_args.args[2]
+    assert saved["preserve_fields"] == ["tags", "xp"]
+
+
+def test_recovery_job_cannot_remove_a_later_login_marker(plugin, snapshot):
+    entered, resume = Event(), Event()
+    plugin.store = SimpleNamespace(save=Mock())
+    plugin.journal.put("old", "123", snapshot)
+
+    def blocker():
+        entered.set()
+        assert resume.wait(5)
+
+    plugin.executor.submit(blocker)
+    assert entered.wait(5)
+    try:
+        plugin._queue_inactive_recovery()
+        plugin.journal.put("new", "123")
+        plugin._sessions["123"] = "new"
+    finally:
+        resume.set()
+    plugin.executor.submit(lambda: None).result(timeout=5)
+    assert plugin.journal.entries() == [("new", "123", None)]
+
+
+def test_legacy_command_requires_console_and_offline_confirmation(plugin, monkeypatch):
+    import endstone_inventory_share_plugin.inventory_share_plugin as module
+
+    class Console:
+        send_message = Mock()
+
+    monkeypatch.setattr(module, "ConsoleCommandSender", Console)
+    plugin.store = SimpleNamespace(release_legacy=Mock(return_value=True))
+    plugin._accepting = True
+    command = SimpleNamespace(name="invshare")
+    console = Console()
+    plugin.on_command(SimpleNamespace(send_message=Mock()), command, ["recoverlegacy", "123", "confirm-offline"])
+    plugin.on_command(console, command, ["recoverlegacy", "123", "yes"])
+    plugin._sessions["123"] = "online"
+    plugin.on_command(console, command, ["recoverlegacy", "123", "confirm-offline"])
+    plugin.store.release_legacy.assert_not_called()
+    plugin._sessions.clear()
+    plugin.on_command(console, command, ["recoverlegacy", "123", "confirm-offline"])
+    plugin.executor.submit(lambda: None).result(timeout=5)
+    plugin.store.release_legacy.assert_called_once_with("123")
+
+
 def test_serialization_failure_cannot_be_saved_as_air():
     class BrokenItem:
         @property

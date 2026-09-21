@@ -14,3 +14,6 @@ sql_pass = "pass"
 sql_db_name = "player_data"
 # Save complete inventory snapshots while players remain online (minimum 5 seconds).
 autosave_seconds = 30
+
+# Retry a busy handoff or temporary database outage before refusing a login (1-60).
+join_wait_seconds = 15

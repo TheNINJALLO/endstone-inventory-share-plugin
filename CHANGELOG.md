@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.7.6 — 2026-09-21
+
+- Retry temporary database errors and busy inventory handoffs before kicking a joining player; configurable default wait is 15 seconds.
+- Recover failed local disconnect saves before reconnect and during periodic saves, while protecting active sessions and newer login markers.
+- Block gameplay inventory input, pickups, and damage until restore completes.
+- Preserve optional XP/Money/tag fields on restore failures instead of kicking players or overwriting those fields.
+- Add explicit load-failure codes, full underlying error diagnostics, and console-only legacy-lock recovery with offline confirmation.
+- Reject malformed inventory record shapes before clearing local items.
+- Retain the v2.7.5 shutdown capture, ordered writes, atomic release, and crash recovery protections.
+
 ## 2.7.5 — 2026-09-20
 
 - Fix rollback on native `stop` by capturing inventories before BDS removes players, then flushing saves during plugin disable.

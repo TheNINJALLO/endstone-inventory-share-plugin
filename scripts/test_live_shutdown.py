@@ -28,7 +28,11 @@ def main():
     parser.add_argument("--client", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--db-port", type=int, required=True)
+    parser.add_argument("--database", default="invshare_live")
+    parser.add_argument("--join-cases", action="store_true", help="Also test handoff, DB retries, local recovery, and legacy tags")
     args = parser.parse_args()
+    if not args.database.startswith("invshare_live") or not args.database.replace("_", "").isalnum():
+        parser.error("Use an invshare_live fixture database name")
     server, output = args.server.resolve(), args.output.resolve()
     if "scratch" not in server.parts or server.exists() or output.exists():
         parser.error("Use NEW server and output directories, with the server below scratch")
@@ -79,14 +83,17 @@ def main():
     from endstone.cli.windows import WindowsBootstrap, PopenWithDll
     boot = WindowsBootstrap(str(server), True, "", False)
     report = {"platform": sys.platform, "wheel_sha256": hashlib.sha256(args.wheel.read_bytes()).hexdigest(), "phases": []}
-    for index, phase in enumerate(("seed", "restore", "crash", "restore")):
+    phases = ["seed", "restore", "crash", "restore"]
+    if args.join_cases:
+        phases.extend(["transient", "handoff", "recovery", "metadata"])
+    for index, phase in enumerate(phases):
         phase_output = output / f"{index + 1}-{phase}"
         phase_output.mkdir()
         env = boot._endstone_runtime_env.copy()
         env.update(PYTHONPATH=str(probe) + os.pathsep + env["PYTHONPATH"],
                    INVSHARE_PROBE_PREFIX=sys.prefix, PYTHONNOUSERSITE="1",
                    INVSHARE_LIVE_DB_PORT=str(args.db_port), INVSHARE_LIVE_OUTPUT=str(phase_output),
-                   INVSHARE_LIVE_PHASE=phase)
+                   INVSHARE_LIVE_PHASE=phase, INVSHARE_LIVE_DATABASE=args.database)
         process = PopenWithDll([str(boot.executable_path)], cwd=server, env=env,
                               dll_names=str(boot._endstone_runtime_path), creationflags=subprocess.CREATE_NO_WINDOW,
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -132,7 +139,7 @@ def main():
             (phase_output / "server.log").write_text("".join(lines), encoding="utf-8")
         if phase != "crash":
             assert process.returncode == 0, process.returncode
-            conn = pymysql.connect(host="127.0.0.1", port=args.db_port, user="root", database="invshare_live")
+            conn = pymysql.connect(host="127.0.0.1", port=args.db_port, user="root", database=args.database)
             try:
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT player_inv,player_enderchest,player_xp_level,is_logged_in,session_token FROM player_data")
@@ -142,6 +149,11 @@ def main():
                 inv, ec, xp, logged_in, token = rows[0]
                 assert (json.loads(inv), json.loads(ec), xp) == (expected["inv_json"], expected["ec_json"], expected["xp_level"])
                 assert (logged_in, token) == (0, None)
+                if phase == "metadata":
+                    with conn.cursor() as cursor:
+                        cursor.execute("SELECT player_tags FROM player_data")
+                        assert cursor.fetchone()[0] == "invalid legacy tags"
+                    result["original_tags_preserved"] = True
                 result["shutdown_database_verified"] = True
             finally:
                 conn.close()

@@ -162,3 +162,62 @@ def test_legacy_text_login_flag_migrates_without_unlocking(mysql):
     assert row(mysql)[2] == 1
     with pytest.raises(SessionBusy):
         mysql.store.claim("123", "new")
+
+
+def test_console_legacy_recovery_preserves_inventory(mysql, snapshot):
+    mysql.store.claim("123", "old")
+    mysql.store.save("123", "old", snapshot, release=True)
+    conn, cursor = mysql._connect()
+    try:
+        cursor.execute("UPDATE player_data SET is_logged_in=1 WHERE player_xuid='123'")
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    assert mysql.store.release_legacy("123")
+    assert row(mysql)[:5] == (snapshot["inv_json"], snapshot["ec_json"], 0, None, 19)
+    restored = mysql.store.claim("123", "new")
+    assert restored["player_inv"] == snapshot["inv_json"]
+
+
+def test_console_legacy_recovery_cannot_unlock_token_owner(mysql):
+    mysql.store.claim("123", "owner")
+    assert not mysql.store.release_legacy("123")
+    assert row(mysql)[2:4] == (1, "owner")
+
+
+def test_failed_local_save_is_recovered_before_reconnect(mysql, snapshot):
+    from types import SimpleNamespace
+    mysql.store.claim("123", "previous")
+    mysql.journal.put("previous", "123", snapshot)
+    mysql.fake_server.scheduler = SimpleNamespace(run_task=lambda *args, **kwargs: None)
+    mysql._accepting = True
+    mysql._begin_join(SimpleNamespace(xuid="123", name="TestPlayer"))
+    mysql.executor.submit(lambda: None).result(timeout=5)
+    assert row(mysql)[:2] == (snapshot["inv_json"], snapshot["ec_json"])
+    assert row(mysql)[2:5] == (1, mysql._sessions["123"], 19)
+    assert all(token != "previous" for token, _, _ in mysql.journal.entries())
+
+
+def test_background_recovery_does_not_unlock_active_players(mysql, snapshot):
+    mysql.store.claim("123", "online")
+    mysql.journal.put("online", "123", snapshot)
+    mysql._sessions["123"] = "online"
+    mysql._autosave()
+    mysql.executor.submit(lambda: None).result(timeout=5)
+    assert row(mysql)[2:4] == (1, "online")
+
+
+def test_preserved_optional_fields_survive_saves_and_recovery(mysql, snapshot):
+    mysql.store.claim("123", "owner")
+    original = deepcopy(snapshot)
+    original.update(money_score=800, tags=["keep"], xp_level=42)
+    mysql.store.save("123", "owner", original)
+    latest = deepcopy(snapshot)
+    latest["preserve_fields"] = ["xp", "money", "tags"]
+    latest["inv_json"] = "[]"
+    mysql.journal.put("owner", "123", latest)
+    assert recover_pending(mysql.store, mysql.journal, mysql.logger) == 0
+    saved = row(mysql)
+    assert saved[0] == "[]"
+    assert saved[4:7] == (42, 800, '["keep"]')

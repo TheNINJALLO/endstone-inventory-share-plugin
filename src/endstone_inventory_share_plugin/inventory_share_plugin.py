@@ -1,20 +1,27 @@
 import os
 import json
 import pymysql
+import time
+import sqlite3
 from pathlib import Path
 from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
 
 from endstone.level import Location
+from endstone.command import ConsoleCommandSender
 from endstone.event import (
     event_handler, EventPriority, PlayerLoginEvent, PlayerJoinEvent,
     PlayerQuitEvent, PlayerCommandEvent, ServerCommandEvent, ScriptMessageEvent,
+    PacketReceiveEvent, PlayerPickupItemEvent, ActorDamageEvent,
 )
 from endstone.inventory import ItemStack
 from endstone.plugin import Plugin
 from endstone.scoreboard import Criteria
 
-from .persistence import InventoryStore, SnapshotJournal, SessionBusy, StaleSession, recover_pending
+from .persistence import (
+    InventoryStore, SnapshotJournal, SessionBusy, LegacySessionBusy, StaleSession,
+    recover_pending, retryable_load_error,
+)
 
 # Endstone 0.11 exports NBT tag classes from endstone.nbt.
 from endstone.nbt import (
@@ -224,9 +231,19 @@ def save_inventory_to_json(inv, size, logger=None, vaulted_items=None):
     return json.dumps(sanitize_for_json(items), ensure_ascii=False), still_vaulted
 
 
+def _parse_saved_items(json_str):
+    items = json.loads(json_str)
+    if not isinstance(items, list):
+        raise ValueError("Saved inventory must be a JSON list")
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get("slot"), int):
+            raise ValueError("Saved inventory contains an invalid item/slot record")
+    return items
+
+
 def load_inventory_from_json(json_str, inv, logger=None, server=None, player_name=None):
     """Restore items from a JSON string into a PlayerInventory."""
-    items = json.loads(json_str)
+    items = _parse_saved_items(json_str)
     unresolved = []
 
     # Clear all main inventory slots
@@ -290,7 +307,7 @@ def save_container_to_json(container, size, logger=None, vaulted_items=None):
 
 def load_container_from_json(json_str, container, logger=None, server=None, player_name=None):
     """Restore items from a JSON string into a generic container."""
-    items = json.loads(json_str)
+    items = _parse_saved_items(json_str)
     unresolved = []
     container.clear()
 
@@ -347,6 +364,12 @@ _REQUIRED_COLUMNS = [
 
 class InventorySharePlugin(Plugin):
     api_version = "0.11"
+    commands = {
+        "invshare": {
+            "description": "Console-only recovery of a legacy inventory login lock",
+            "usages": ["/invshare recoverlegacy <xuid: string> <confirmation: string>"],
+        }
+    }
 
     def __init__(self):
         super().__init__()
@@ -364,6 +387,9 @@ class InventorySharePlugin(Plugin):
         self._sessions = {}
         self._ready_players = set()
         self._pending_autosaves = {}
+        self._preserved_fields = {}
+        self._recovery_future = None
+        self.join_wait_seconds = 15
         self._stopping = False
         self._accepting = False
         self._autosave_task = None
@@ -382,6 +408,7 @@ class InventorySharePlugin(Plugin):
         self.sql_db_name = self.config["sql_db_name"]
         self.server_name = self._get_server_name()
         self.autosave_seconds = max(5, int(self.config.get("autosave_seconds", 30)))
+        self.join_wait_seconds = max(1, min(60, int(self.config.get("join_wait_seconds", 15))))
 
     def _get_server_name(self):
         """Extract the server-name from server.properties."""
@@ -432,10 +459,11 @@ class InventorySharePlugin(Plugin):
     # Shared save helper
     # -----------------------------------------------------------------------
 
-    def _extract_player_data(self, player):
+    def _extract_player_data(self, player, *, token=None):
         """Synchronously extract all data needed for saving."""
         xuid = player.xuid
         name = player.name
+        preserved = self._preserved_fields.get(token or self._sessions.get(xuid), set())
         
         vault = self._unresolved.get(xuid, {"inventory": [], "enderchest": []})
 
@@ -451,18 +479,18 @@ class InventorySharePlugin(Plugin):
             vaulted_items=vault.get("enderchest", [])
         )
 
-        xp_level = player.exp_level
-        xp_progress = player.exp_progress
+        xp_level = None if "xp" in preserved else player.exp_level
+        xp_progress = None if "xp" in preserved else player.exp_progress
 
         money_score = None
         try:
-            money_obj = self._get_or_create_money_objective()
+            money_obj = None if "money" in preserved else self._get_or_create_money_objective()
             if money_obj is not None:
                 money_score = money_obj.get_score(player).value
         except Exception as e:
             self.logger.warning(f"[Money Save] Could not extract Money score for {name}: {e}")
 
-        tags = [str(t) for t in player.scoreboard_tags]
+        tags = [] if "tags" in preserved else [str(t) for t in player.scoreboard_tags]
         
         loc = player.location
         current_location = {
@@ -494,6 +522,7 @@ class InventorySharePlugin(Plugin):
             "vaulted_count": len(inv_still_vaulted) + len(ec_still_vaulted),
             "current_location": current_location,
             "bundle_data": bundle_data,
+            "preserve_fields": sorted(preserved),
         }
 
     def _persist_snapshot(self, xuid, token, data, release=False):
@@ -516,7 +545,10 @@ class InventorySharePlugin(Plugin):
     def _queue_snapshot(self, player, token, *, release=False):
         # Called on the server thread, including the quit event, while the player
         # is still accessible. Never send Player/Inventory/ItemStack to workers.
-        data = self._extract_player_data(player)
+        data = self._extract_player_data(player, token=token)
+        # Quit removes the active XUID mapping before capture. Use the explicit
+        # session token so failed optional fields also stay protected on quit.
+        data["preserve_fields"] = sorted(self._preserved_fields.get(token, set()))
         self.journal.put(token, player.xuid, data)
         return self.executor.submit(self._persist_snapshot, player.xuid, token, data, release)
 
@@ -537,6 +569,7 @@ class InventorySharePlugin(Plugin):
     def _autosave(self):
         if self._stopping:
             return
+        self._queue_inactive_recovery()
         for player in self.server.online_players:
             token = self._sessions.get(player.xuid)
             if token not in self._ready_players:
@@ -548,6 +581,71 @@ class InventorySharePlugin(Plugin):
                 self._pending_autosaves[token] = self._queue_snapshot(player, token)
             except Exception as error:
                 self.logger.error(f"Inventory snapshot failed for {player.name}: {error}")
+
+    def _queue_inactive_recovery(self):
+        if self._stopping or self.executor is None:
+            return
+        if self._recovery_future is not None and not self._recovery_future.done():
+            return
+        # Snapshot the list on the main thread. Reading every journal record
+        # later on the worker could erase a newly created login's marker.
+        active = set(self._sessions.values())
+        entries = [entry for entry in self.journal.entries() if entry[0] not in active]
+        if entries:
+            self._recovery_future = self.executor.submit(
+                recover_pending, self.store, self.journal, self.logger, entries=entries,
+            )
+
+    def on_command(self, sender, command, args):
+        if command.name != "invshare":
+            return False
+        if not isinstance(sender, ConsoleCommandSender):
+            sender.send_message("Inventory recovery is available from the server console only.")
+            return True
+        if (len(args) != 3 or args[0].lower() != "recoverlegacy"
+                or not args[1].isdigit() or args[2].lower() != "confirm-offline"):
+            sender.send_message("After confirming the player is offline on ALL servers, use: "
+                                "invshare recoverlegacy <xuid> confirm-offline")
+            return True
+        xuid = args[1]
+        if self._stopping or not self._accepting or xuid in self._sessions:
+            sender.send_message("Recovery refused: storage is unavailable or the player is connected here.")
+            return True
+
+        def recover():
+            try:
+                changed = self.store.release_legacy(xuid)
+                self.logger.info(f"[Legacy Recovery] {xuid}: " + (
+                    "legacy lock released after console confirmation; inventory unchanged."
+                    if changed else "no legacy lock found; token-owned sessions are never unlocked here."
+                ))
+            except Exception as error:
+                self.logger.error(f"[Legacy Recovery] {xuid}: {error}")
+
+        self.executor.submit(recover)
+        sender.send_message("Legacy recovery queued; the result will appear in the console.")
+        return True
+
+    @event_handler(priority=EventPriority.HIGHEST, ignore_cancelled=True)
+    def on_loading_packet(self, event: PacketReceiveEvent):
+        # EndstoneMC/bedrock-protocol packet IDs: movement, inventory actions,
+        # equipment, interactions, picking, player actions, commands, books,
+        # authoritative input (also embeds item transactions), stack requests.
+        if event.packet_id not in {19, 30, 31, 32, 33, 34, 35, 36, 77, 97, 144, 147}:
+            return
+        player = event.player
+        if player and player.xuid in self._loading_players:
+            event.is_cancelled = True
+
+    @event_handler(priority=EventPriority.HIGHEST, ignore_cancelled=True)
+    def on_loading_pickup(self, event: PlayerPickupItemEvent):
+        if event.player.xuid in self._loading_players:
+            event.is_cancelled = True
+
+    @event_handler(priority=EventPriority.HIGHEST, ignore_cancelled=True)
+    def on_loading_damage(self, event: ActorDamageEvent):
+        if getattr(event.actor, "xuid", None) in self._loading_players:
+            event.is_cancelled = True
 
     # -----------------------------------------------------------------------
     # Schema bootstrap
@@ -663,7 +761,7 @@ class InventorySharePlugin(Plugin):
             self, self._autosave, delay=self.autosave_seconds * 20,
             period=self.autosave_seconds * 20,
         )
-        self.logger.info(f"InventorySharePlugin v2.7.5 enabled; autosave every {self.autosave_seconds}s")
+        self.logger.info(f"InventorySharePlugin v2.7.6 enabled; autosave every {self.autosave_seconds}s")
         for player in self.server.online_players:
             # Hot enabling must use the same claim/restore path as a fresh join.
             self._begin_join(player)
@@ -738,28 +836,51 @@ class InventorySharePlugin(Plugin):
             return
         token = str(uuid4())
         try:
+            self._queue_inactive_recovery()
             # The marker permits recovery even if the process exits immediately
             # after claiming the SQL row, before its first inventory snapshot.
             self.journal.put(token, xuid)
         except Exception as error:
             self.logger.error(f"Cannot journal inventory session for {name}: {error}")
-            target.kick("Inventory storage is unavailable. Please try again later.")
+            target.kick("[INV-JOURNAL] Local inventory recovery storage is unavailable.")
             return
         self._sessions[xuid] = token
         self._loading_players.add(xuid)
         self._bundle_cache.pop(name, None)
+        deadline = time.monotonic() + self.join_wait_seconds
+        warned_waiting = False
 
         def fail_join(error):
-            self.logger.error(f"Failed to load inventory for {name}: {error}")
+            if isinstance(error, LegacySessionBusy):
+                code, reason = "INV-LEGACY", "An old inventory login lock needs administrator recovery."
+            elif isinstance(error, SessionBusy):
+                code, reason = "INV-BUSY", "Your previous inventory session is still active or saving."
+            elif isinstance(error, pymysql.err.MySQLError):
+                code, reason = "INV-DB", "The shared inventory database is unavailable."
+            elif isinstance(error, sqlite3.Error):
+                code, reason = "INV-JOURNAL", "Local inventory recovery storage is unavailable."
+            else:
+                code, reason = "INV-DATA", "Your saved inventory could not be restored. Contact an administrator."
+            causes, current = [], error
+            while current is not None and len(causes) < 5:
+                causes.append(f"{type(current).__name__}: {current}")
+                current = current.__cause__
+            self.logger.error(f"Failed to load inventory for {name} (XUID {xuid}) [{code}]: " + " <- ".join(causes))
+            if code == "INV-LEGACY":
+                self.logger.warning(f"Confirm {name} is offline on ALL servers, then run in console: "
+                                    f"invshare recoverlegacy {xuid} confirm-offline")
             def kick():
                 if self._sessions.get(xuid) == token and not self._stopping:
                     p = self.server.get_player(name)
                     if p:
-                        p.kick("Your shared inventory could not be loaded safely. Please try again later.")
+                        p.kick(f"[{code}] {reason}")
             if not self._stopping:
                 self.server.scheduler.run_task(self, kick)
 
         def load_inventory_task():
+            nonlocal warned_waiting
+            if self._stopping or self._sessions.get(xuid) != token:
+                return
             try:
                 row = self.store.claim(xuid, token)
                 db_vault_data = json.loads(row["unresolved_items"]) if row["unresolved_items"] else {}
@@ -812,7 +933,9 @@ class InventorySharePlugin(Plugin):
                                     p.exp_progress = xp_progress
                                 self.logger.info(f"Restored XP for {p.name}: level={xp_level}, progress={xp_progress:.2f}")
                             except Exception as e:
-                                raise RuntimeError(f"Failed to restore XP for {name}") from e
+                                self._preserved_fields.setdefault(token, set()).add("xp")
+                                self.logger.warning(f"[Join Sync] XP restore failed for {name}: {e}; "
+                                                    "preserving the saved XP fields.")
 
                         # Restore Money score safely
                         if money_res:
@@ -820,18 +943,23 @@ class InventorySharePlugin(Plugin):
                                 db_money = money_res[0] if money_res[0] is not None else 0
                                 if db_money is not None:
                                     money_obj = self._get_or_create_money_objective()
-                                    if money_obj is not None:
-                                        score = money_obj.get_score(p)
-                                        if score.value != int(db_money):
-                                            score.value = int(db_money)
-                                        self.logger.info(f"Restored Money score for {p.name}: {db_money}")
+                                    if money_obj is None:
+                                        raise RuntimeError("Money scoreboard objective is unavailable")
+                                    score = money_obj.get_score(p)
+                                    if score.value != int(db_money):
+                                        score.value = int(db_money)
+                                    self.logger.info(f"Restored Money score for {p.name}: {db_money}")
                             except Exception as e:
-                                self.logger.error(f"Failed to restore Money score for {name}: {e}")
+                                self._preserved_fields.setdefault(token, set()).add("money")
+                                self.logger.warning(f"[Join Sync] Money restore failed for {name}: {e}; "
+                                                    "preserving the saved Money field.")
 
                         # Restore Tags safely without C++ memory corruption (double free prevention)
                         if tags_res and tags_res[0]:
                             try:
                                 stored_tags = json.loads(tags_res[0])
+                                if not isinstance(stored_tags, list):
+                                    raise ValueError("Saved tags must be a JSON list")
                                 if isinstance(stored_tags, list):
                                     target_tags = set(str(t) for t in stored_tags)
                                     current_tags = set(str(t) for t in p.scoreboard_tags)
@@ -845,7 +973,9 @@ class InventorySharePlugin(Plugin):
                                         
                                     self.logger.info(f"Restored {len(target_tags)} tag(s) for {p.name}: {list(target_tags)}")
                             except Exception as e:
-                                raise RuntimeError(f"Failed to restore tags for {name}") from e
+                                self._preserved_fields.setdefault(token, set()).add("tags")
+                                self.logger.warning(f"[Join Sync] Tag restore failed for {name}: {e}; "
+                                                    "preserving the saved tags field.")
 
                         # Restore Location safely
                         if locations_json:
@@ -928,10 +1058,26 @@ class InventorySharePlugin(Plugin):
 
                 if not self._stopping:
                     self.server.scheduler.run_task(self, apply_inventory_sync, delay=2)
-            except SessionBusy as error:
-                self.journal.remove(token)
-                fail_join(error)
             except Exception as error:
+                if retryable_load_error(error) and time.monotonic() < deadline and not self._stopping:
+                    first_notice = not warned_waiting
+                    warned_waiting = True
+                    if first_notice:
+                        self.logger.info(f"[Join Sync] Waiting for inventory handoff/database for {name}: {error}")
+                    def retry():
+                        if self._stopping or self._sessions.get(xuid) != token:
+                            return
+                        if first_notice:
+                            player = self.server.get_player(name)
+                            if player:
+                                player.send_message("Loading your shared inventory; please wait...")
+                        try:
+                            self._queue_inactive_recovery()
+                            self.executor.submit(load_inventory_task)
+                        except Exception as retry_error:
+                            fail_join(retry_error)
+                    self.server.scheduler.run_task(self, retry, delay=20)
+                    return
                 fail_join(error)
 
         self.executor.submit(load_inventory_task)
@@ -944,6 +1090,7 @@ class InventorySharePlugin(Plugin):
         if token and self.executor is not None:
             self._finish_session(target, token)
         self._ready_players.discard(token)
+        self._preserved_fields.pop(token, None)
         self._pending_autosaves.pop(token, None)
         self._loading_players.discard(xuid)
         self._unresolved.pop(xuid, None)

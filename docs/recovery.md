@@ -1,5 +1,11 @@
 # Shutdown and inventory recovery
 
+## Kicked while loading a shared inventory
+
+v2.7.5 used the same generic kick message for different failures. v2.7.6 retries busy handoffs and temporary database errors, recovers failed local disconnect saves before reconnect, and reports a specific code when loading still cannot complete. See the [README error table](../README.md#load-errors-and-legacy-recovery).
+
+The console now includes the XUID and underlying exception chain. Optional XP, Money, or tag restore failures log a warning and preserve the original database fields during subsequent saves. Inventory/ender-chest corruption still prevents a load, rather than accepting and saving an empty inventory.
+
 ## Planned reboots
 
 Configure the control panel's stop action to send the native `stop` command and wait for BDS to exit. Inventory Share captures complete snapshots while players still exist, drains earlier saves, and commits each final snapshot with its login-lock release. Look for:
@@ -17,7 +23,7 @@ The local `plugins/inventory_share_plugin/pending-inventories.sqlite3` file reco
 
 1. Preserve the owning server's plugin data directory and journal.
 2. Restore database connectivity and write access.
-3. Restart that server with v2.7.5. Startup recovery runs before logins are accepted.
+3. A running v2.7.6 server retries pending disconnected sessions during its periodic save cycle and before a reconnect. If it was stopped or startup recovery failed, restart it after restoring database access; startup recovery runs before logins are accepted.
 4. Confirm that the console reports no pending saves, then reconnect the player.
 
 If recovery fails, logins to that server stay blocked. Other servers also reject the affected player while its inventory is locked. Do not clear that lock to bypass a pending save: doing so can make the older shared inventory authoritative. If the journal is lost, restore from a known backup and reconcile the player's inventory during maintenance.
@@ -27,6 +33,14 @@ An older journal is discarded if a newer session owns the row or if the original
 ## Locks left by v2.7.4 or earlier
 
 The old shutdown path can leave `is_logged_in` set even though the player is offline. Those rows have no `session_token` after migration. New versions preserve these locks because an older server might still be using the inventory.
+
+After upgrading every participating server and confirming the affected player is offline on ALL servers, run this in a v2.7.6 server console (replace the placeholder with the numeric XUID from the error):
+
+```text
+invshare recoverlegacy AFFECTED_NUMERIC_XUID confirm-offline
+```
+
+The console reports whether a legacy lock was released. This does not change inventory fields, and it refuses token-owned sessions or locally connected players. The confirmation is your assertion that the player is offline network-wide; the plugin cannot query an older server's live player list. Then let that player reconnect. The SQL procedure below is an alternative for administrators using database tools.
 
 Stop all servers sharing this database, back up the table, and upgrade every server. Start one server in maintenance mode with player joins blocked to run schema migration, then stop it. Inspect the affected player's row in your configured database:
 

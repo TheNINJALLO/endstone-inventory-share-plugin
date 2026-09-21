@@ -9,13 +9,28 @@ from pathlib import Path
 import sqlite3
 import threading
 
+import pymysql
+
 
 class SessionBusy(RuntimeError):
     pass
 
 
+class LegacySessionBusy(SessionBusy):
+    """An old login flag has no token/journal with which to prove ownership."""
+
+
 class StaleSession(RuntimeError):
     pass
+
+
+def retryable_load_error(error):
+    if isinstance(error, LegacySessionBusy):
+        return False
+    return isinstance(error, SessionBusy) or (
+        isinstance(error, pymysql.err.OperationalError)
+        and error.args and error.args[0] in {1040, 1205, 1213, 2002, 2003, 2006, 2013}
+    )
 
 
 class SnapshotJournal:
@@ -83,6 +98,9 @@ class InventoryStore:
                            "WHERE player_xuid=%s FOR UPDATE", (xuid,))
             logged_in, owner = cursor.fetchone()
             if logged_in and owner != token:
+                if not owner:
+                    raise LegacySessionBusy("Legacy login lock without a session token; "
+                                            "an administrator must confirm the player is offline on all servers")
                 raise SessionBusy("Inventory is still in use or waiting for a save on another server")
             cursor.execute("UPDATE player_data SET is_logged_in=1, session_token=%s "
                            "WHERE player_xuid=%s", (token, xuid))
@@ -114,14 +132,20 @@ class InventoryStore:
                 locations[self.server_name] = data["current_location"]
                 vault = data["updated_vault"]
                 bundles = data.get("bundle_data")
+                preserve = set(data.get("preserve_fields", []))
                 cursor.execute(
                     "UPDATE player_data SET player_inv=%s, player_enderchest=%s, "
-                    "player_xp_level=%s, player_xp_progress=%s, "
-                    "player_money_score=COALESCE(%s,player_money_score), player_tags=%s, "
+                    "player_xp_level=COALESCE(%s,player_xp_level), "
+                    "player_xp_progress=COALESCE(%s,player_xp_progress), "
+                    "player_money_score=COALESCE(%s,player_money_score), "
+                    "player_tags=COALESCE(%s,player_tags), "
                     "unresolved_items=%s, player_locations=%s, "
                     "player_bundles=COALESCE(%s,player_bundles) WHERE player_xuid=%s",
-                    (data["inv_json"], data["ec_json"], data["xp_level"], data["xp_progress"],
-                     data["money_score"], json.dumps(data["tags"], ensure_ascii=False),
+                    (data["inv_json"], data["ec_json"],
+                     None if "xp" in preserve else data["xp_level"],
+                     None if "xp" in preserve else data["xp_progress"],
+                     None if "money" in preserve else data["money_score"],
+                     None if "tags" in preserve else json.dumps(data["tags"], ensure_ascii=False),
                      json.dumps(vault, ensure_ascii=False), json.dumps(locations, ensure_ascii=False),
                      json.dumps(bundles, ensure_ascii=False) if bundles is not None else None, xuid),
                 )
@@ -137,10 +161,28 @@ class InventoryStore:
             conn.close()
 
 
-def recover_pending(store, journal, logger):
+    def release_legacy(self, xuid):
+        """Console recovery only, after the operator confirms network-wide logout."""
+        conn, cursor = self.connect()
+        try:
+            cursor.execute("UPDATE player_data SET is_logged_in=0 "
+                           "WHERE player_xuid=%s AND is_logged_in=1 "
+                           "AND (session_token IS NULL OR session_token='')", (xuid,))
+            changed = cursor.rowcount == 1
+            conn.commit()
+            return changed
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cursor.close()
+            conn.close()
+
+
+def recover_pending(store, journal, logger, *, entries=None):
     """Replay only snapshots whose original token still owns the shared row."""
     failures = 0
-    for token, xuid, data in journal.entries():
+    for token, xuid, data in journal.entries() if entries is None else entries:
         try:
             store.save(xuid, token, data, release=True)
         except StaleSession:
