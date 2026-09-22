@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.7.7 — 2026-09-21
+
+- Automatically recover tokenless legacy login flags on join, replacing `INV-LEGACY` kicks and per-player console intervention.
+- Adopt the row and load saved fields in one transaction; preserve inventory, ender chest, XP, Money, tags, locations, bundles, and unresolved items.
+- Protect existing token owners even if their login flag is inconsistent. Require all sharing servers to be upgraded together.
+- Avoid the reproduced concurrent-claim deadlock by acquiring an exclusive duplicate-row lock before reading ownership.
+- Test NULL/empty legacy tokens, competing claims, transaction rollback, and real-player legacy recovery; retain shutdown, journal, and handoff regression coverage.
+
 ## 2.7.6 — 2026-09-21
 
 - Retry temporary database errors and busy inventory handoffs before kicking a joining player; configurable default wait is 15 seconds.

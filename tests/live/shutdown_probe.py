@@ -38,7 +38,7 @@ class Probe(InventorySharePlugin):
     def on_player_join(self, event: PlayerJoinEvent):
         # Make the local world inventory deliberately wrong. A passing restore
         # must come from MySQL, not from BDS's own player-data save.
-        if self.phase in {"restore", "transient", "handoff", "recovery", "metadata"}:
+        if self.phase in {"restore", "transient", "handoff", "recovery", "metadata", "legacy-null", "legacy-empty"}:
             event.player.inventory.clear()
             event.player.ender_chest.clear()
             event.player.inventory.set_item(0, ItemStack("minecraft:dirt", 1))
@@ -74,6 +74,16 @@ class Probe(InventorySharePlugin):
             self.store.save = unavailable
             assert self._persist_snapshot(xuid, "failed-quit", data, True) is False
             self.store.save = original_save
+        elif self.phase in {"legacy-null", "legacy-empty"}:
+            conn, cursor = self._connect()
+            try:
+                cursor.execute("UPDATE player_data SET is_logged_in=1,session_token=%s WHERE player_xuid=%s",
+                               (None if self.phase == "legacy-null" else "", event.player.xuid))
+                assert cursor.rowcount == 1
+                conn.commit()
+            finally:
+                cursor.close()
+                conn.close()
         elif self.phase == "metadata":
             conn, cursor = self._connect()
             try:
@@ -137,7 +147,7 @@ class Probe(InventorySharePlugin):
                 return
             player = players[0]
             token = self._sessions[player.xuid]
-            if self.phase in {"restore", "transient", "handoff", "recovery", "metadata"}:
+            if self.phase in {"restore", "transient", "handoff", "recovery", "metadata", "legacy-null", "legacy-empty"}:
                 actual = self.read(player)
                 expected = json.loads((self.output.parent / "expected.json").read_text())
                 assert actual == expected, f"Restore differs: {actual!r} != {expected!r}"
@@ -148,6 +158,15 @@ class Probe(InventorySharePlugin):
                     assert all(token != "failed-quit" for token, _, _ in self.journal.entries())
                 if self.phase == "metadata":
                     assert "tags" in self._preserved_fields[token]
+                if self.phase in {"legacy-null", "legacy-empty"}:
+                    conn, cursor = self._connect()
+                    try:
+                        cursor.execute("SELECT is_logged_in,session_token FROM player_data WHERE player_xuid=%s",
+                                       (player.xuid,))
+                        assert cursor.fetchone() == (1, token)
+                    finally:
+                        cursor.close()
+                        conn.close()
                 self.finish({"passed": True, "phase": self.phase, "restored": actual,
                              "claim_attempts": self.claim_attempts, "blocked_packets": self.blocked_packets})
             elif self.stage == 0:

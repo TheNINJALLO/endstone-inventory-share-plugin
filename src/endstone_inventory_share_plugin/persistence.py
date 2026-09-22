@@ -16,17 +16,11 @@ class SessionBusy(RuntimeError):
     pass
 
 
-class LegacySessionBusy(SessionBusy):
-    """An old login flag has no token/journal with which to prove ownership."""
-
-
 class StaleSession(RuntimeError):
     pass
 
 
 def retryable_load_error(error):
-    if isinstance(error, LegacySessionBusy):
-        return False
     return isinstance(error, SessionBusy) or (
         isinstance(error, pymysql.err.OperationalError)
         and error.args and error.args[0] in {1040, 1205, 1213, 2002, 2003, 2006, 2013}
@@ -97,16 +91,23 @@ class InventoryStore:
         self.server_name = server_name
 
     def claim(self, xuid, token):
+        if not token:
+            raise ValueError("An inventory session must have a nonempty token")
         conn, cursor = self.connect()
         try:
-            cursor.execute("INSERT IGNORE INTO player_data (player_xuid) VALUES (%s)", (xuid,))
+            # Acquire an exclusive lock even for existing rows. INSERT IGNORE
+            # takes shared duplicate-key locks, which competing joins can
+            # deadlock when both upgrade to SELECT FOR UPDATE below.
+            cursor.execute("INSERT INTO player_data (player_xuid) VALUES (%s) "
+                           "ON DUPLICATE KEY UPDATE player_xuid=VALUES(player_xuid)", (xuid,))
             cursor.execute("SELECT is_logged_in, session_token FROM player_data "
                            "WHERE player_xuid=%s FOR UPDATE", (xuid,))
             logged_in, owner = cursor.fetchone()
-            if logged_in and owner != token:
-                if not owner:
-                    raise LegacySessionBusy("Legacy login lock without a session token; "
-                                            "an administrator must confirm the player is offline on all servers")
+            # The token is authoritative even if an old writer changed the flag.
+            # A tokenless legacy flag is adopted under this same row lock: never
+            # briefly unlock it or change saved items. All servers must be upgraded
+            # together because pre-token writers cannot participate in fencing.
+            if owner and owner != token:
                 raise SessionBusy("Inventory is still in use or waiting for a save on another server")
             cursor.execute("UPDATE player_data SET is_logged_in=1, session_token=%s "
                            "WHERE player_xuid=%s", (token, xuid))
@@ -116,6 +117,7 @@ class InventoryStore:
                            "WHERE player_xuid=%s", (xuid,))
             row = dict(zip((column[0] for column in cursor.description), cursor.fetchone()))
             conn.commit()
+            row["_legacy_lock_recovered"] = bool(logged_in and not owner)
             return row
         except Exception:
             conn.rollback()

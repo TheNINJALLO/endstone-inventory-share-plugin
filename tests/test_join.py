@@ -115,15 +115,17 @@ def test_busy_retry_stops_at_deadline_and_never_releases_owner(plugin, monkeypat
     plugin.store.save.assert_not_called()
 
 
-def test_legacy_lock_explains_admin_recovery_without_retry(plugin, caplog):
-    from endstone_inventory_share_plugin.persistence import LegacySessionBusy
+def test_legacy_lock_recovery_logs_and_restores_without_kick(plugin, caplog):
+    import logging
+    caplog.set_level(logging.INFO)
     player, callbacks = setup_join(plugin)
-    plugin.store.claim.side_effect = LegacySessionBusy("legacy flag")
+    plugin.store.claim.return_value["_legacy_lock_recovered"] = True
     plugin._begin_join(player)
     drain(plugin)
     callbacks.pop(0)()
-    assert "INV-LEGACY" in player.kick.call_args.args[0]
-    assert "invshare recoverlegacy 123 confirm-offline" in caplog.text
+    player.kick.assert_not_called()
+    assert plugin._sessions[player.xuid] in plugin._ready_players
+    assert "Automatically recovered legacy inventory lock for TestPlayer (XUID 123)" in caplog.text
     plugin.store.claim.assert_called_once()
     plugin.store.save.assert_not_called()
 

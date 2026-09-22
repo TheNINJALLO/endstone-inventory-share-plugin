@@ -19,7 +19,7 @@ from endstone.plugin import Plugin
 from endstone.scoreboard import Criteria
 
 from .persistence import (
-    InventoryStore, SnapshotJournal, SessionBusy, LegacySessionBusy, StaleSession,
+    InventoryStore, SnapshotJournal, SessionBusy, StaleSession,
     recover_pending, retryable_load_error,
 )
 
@@ -761,7 +761,7 @@ class InventorySharePlugin(Plugin):
             self, self._autosave, delay=self.autosave_seconds * 20,
             period=self.autosave_seconds * 20,
         )
-        self.logger.info(f"InventorySharePlugin v2.7.6 enabled; autosave every {self.autosave_seconds}s")
+        self.logger.info(f"InventorySharePlugin v2.7.7 enabled; autosave every {self.autosave_seconds}s")
         for player in self.server.online_players:
             # Hot enabling must use the same claim/restore path as a fresh join.
             self._begin_join(player)
@@ -851,9 +851,7 @@ class InventorySharePlugin(Plugin):
         warned_waiting = False
 
         def fail_join(error):
-            if isinstance(error, LegacySessionBusy):
-                code, reason = "INV-LEGACY", "An old inventory login lock needs administrator recovery."
-            elif isinstance(error, SessionBusy):
+            if isinstance(error, SessionBusy):
                 code, reason = "INV-BUSY", "Your previous inventory session is still active or saving."
             elif isinstance(error, pymysql.err.MySQLError):
                 code, reason = "INV-DB", "The shared inventory database is unavailable."
@@ -866,9 +864,6 @@ class InventorySharePlugin(Plugin):
                 causes.append(f"{type(current).__name__}: {current}")
                 current = current.__cause__
             self.logger.error(f"Failed to load inventory for {name} (XUID {xuid}) [{code}]: " + " <- ".join(causes))
-            if code == "INV-LEGACY":
-                self.logger.warning(f"Confirm {name} is offline on ALL servers, then run in console: "
-                                    f"invshare recoverlegacy {xuid} confirm-offline")
             def kick():
                 if self._sessions.get(xuid) == token and not self._stopping:
                     p = self.server.get_player(name)
@@ -883,6 +878,9 @@ class InventorySharePlugin(Plugin):
                 return
             try:
                 row = self.store.claim(xuid, token)
+                if row.get("_legacy_lock_recovered"):
+                    self.logger.info(f"Automatically recovered legacy inventory lock for {name} "
+                                     f"(XUID {xuid}); saved inventory unchanged, restoring now.")
                 db_vault_data = json.loads(row["unresolved_items"]) if row["unresolved_items"] else {}
                 inv_json, ec_json = row["player_inv"], row["player_enderchest"]
                 xp_res = (row["player_xp_level"], row["player_xp_progress"])

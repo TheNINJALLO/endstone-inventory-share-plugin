@@ -29,7 +29,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--db-port", type=int, required=True)
     parser.add_argument("--database", default="invshare_live")
-    parser.add_argument("--join-cases", action="store_true", help="Also test handoff, DB retries, local recovery, and legacy tags")
+    parser.add_argument("--join-cases", action="store_true", help="Also test handoff, DB retries, local recovery, legacy locks/tags")
     args = parser.parse_args()
     if not args.database.startswith("invshare_live") or not args.database.replace("_", "").isalnum():
         parser.error("Use an invshare_live fixture database name")
@@ -85,7 +85,7 @@ def main():
     report = {"platform": sys.platform, "wheel_sha256": hashlib.sha256(args.wheel.read_bytes()).hexdigest(), "phases": []}
     phases = ["seed", "restore", "crash", "restore"]
     if args.join_cases:
-        phases.extend(["transient", "handoff", "recovery", "metadata"])
+        phases.extend(["transient", "handoff", "recovery", "legacy-null", "legacy-empty", "metadata"])
     for index, phase in enumerate(phases):
         phase_output = output / f"{index + 1}-{phase}"
         phase_output.mkdir()
@@ -139,6 +139,9 @@ def main():
             (phase_output / "server.log").write_text("".join(lines), encoding="utf-8")
         if phase != "crash":
             assert process.returncode == 0, process.returncode
+            if phase in {"legacy-null", "legacy-empty"}:
+                assert any("Automatically recovered legacy inventory lock" in line for line in lines)
+                result["automatic_legacy_recovery_verified"] = True
             conn = pymysql.connect(host="127.0.0.1", port=args.db_port, user="root", database=args.database)
             try:
                 with conn.cursor() as cursor:

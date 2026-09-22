@@ -34,7 +34,17 @@ def test_final_save_and_new_server_restore(mysql, snapshot):
     assert restored["player_xp_level"] == 19
 
 
-def test_only_one_concurrent_server_can_claim(mysql):
+@pytest.mark.parametrize("legacy_token", ["new-row", None, ""])
+def test_only_one_concurrent_server_can_claim(mysql, legacy_token):
+    if legacy_token != "new-row":
+        conn, cursor = mysql._connect()
+        try:
+            cursor.execute("INSERT INTO player_data (player_xuid,is_logged_in,session_token) "
+                           "VALUES ('123',1,%s)", (legacy_token,))
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
     barrier = Barrier(2)
 
     def claim(token):
@@ -50,13 +60,21 @@ def test_only_one_concurrent_server_can_claim(mysql):
         assert sorted(f.result(timeout=10) for f in futures) == [False, True]
 
 
-def test_rejected_connection_cannot_unlock_another_server(mysql):
+@pytest.mark.parametrize("logged_in", [0, 1])
+def test_rejected_connection_cannot_unlock_another_server(mysql, logged_in):
     mysql.store.claim("123", "owner")
+    conn, cursor = mysql._connect()
+    try:
+        cursor.execute("UPDATE player_data SET is_logged_in=%s WHERE player_xuid='123'", (logged_in,))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
     with pytest.raises(SessionBusy):
         mysql.store.claim("123", "rejected")
     with pytest.raises(StaleSession):
         mysql.store.save("123", "rejected", release=True)
-    assert row(mysql)[2:4] == (1, "owner")
+    assert row(mysql)[2:4] == (logged_in, "owner")
 
 
 def test_older_session_cannot_overwrite_new_owner(mysql, snapshot):
@@ -160,8 +178,70 @@ def test_legacy_text_login_flag_migrates_without_unlocking(mysql):
         conn.close()
     mysql._ensure_schema()
     assert row(mysql)[2] == 1
-    with pytest.raises(SessionBusy):
-        mysql.store.claim("123", "new")
+    restored = mysql.store.claim("123", "new")
+    assert restored["_legacy_lock_recovered"] is True
+    assert row(mysql)[2:4] == (1, "new")
+
+
+@pytest.mark.parametrize("legacy_token", [None, ""])
+def test_automatic_legacy_recovery_preserves_every_saved_field(mysql, snapshot, legacy_token):
+    mysql.store.claim("123", "old")
+    mysql.store.save("123", "old", snapshot, release=True)
+    conn, cursor = mysql._connect()
+    try:
+        cursor.execute("UPDATE player_data SET is_logged_in=1,session_token=%s WHERE player_xuid='123'",
+                       (legacy_token,))
+        cursor.execute("SELECT * FROM player_data WHERE player_xuid='123'")
+        original = dict(zip((column[0] for column in cursor.description), cursor.fetchone()))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    restored = mysql.store.claim("123", "new")
+    assert restored.pop("_legacy_lock_recovered") is True
+    assert restored == {key: original[key] for key in restored}
+    assert row(mysql)[2:4] == (1, "new")
+    assert mysql.store.claim("123", "new")["_legacy_lock_recovered"] is False
+
+
+def test_failed_legacy_claim_rolls_back_and_can_retry(mysql, snapshot):
+    mysql.store.claim("123", "old")
+    mysql.store.save("123", "old", snapshot, release=True)
+    conn, cursor = mysql._connect()
+    try:
+        cursor.execute("UPDATE player_data SET is_logged_in=1 WHERE player_xuid='123'")
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    before = row(mysql)
+
+    class FailRead:
+        def __init__(self, cursor):
+            self.cursor = cursor
+
+        def __getattr__(self, name):
+            return getattr(self.cursor, name)
+
+        def execute(self, sql, args=None):
+            if sql.startswith("SELECT player_inv"):
+                raise OSError("injected failure after legacy adoption")
+            return self.cursor.execute(sql, args)
+
+    def failing_connect():
+        conn, cursor = mysql._connect()
+        return conn, FailRead(cursor)
+
+    with pytest.raises(OSError):
+        InventoryStore(failing_connect, "test-server").claim("123", "failed")
+    assert row(mysql) == before
+    assert mysql.store.claim("123", "retry")["_legacy_lock_recovered"] is True
+
+
+def test_empty_claim_token_cannot_create_an_unprotected_session(mysql):
+    with pytest.raises(ValueError):
+        mysql.store.claim("123", "")
+    assert row(mysql) is None
 
 
 def test_console_legacy_recovery_preserves_inventory(mysql, snapshot):
