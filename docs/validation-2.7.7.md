@@ -26,6 +26,6 @@ python scripts/test_live_shutdown.py --bds C:/fixtures/bds-1.26.51.1 `
   --database invshare_live_277 --join-cases
 ```
 
-Final GitHub-built wheel acceptance is pending; release publication waits for all ten phases and a recorded matching wheel digest.
+**All ten phases passed on the final GitHub-built wheel.** The [Windows results](validation/2.7.7-windows.json) record the wheel SHA256, phase results, and CI build provenance. Both legacy formats restored correctly without a command or kick, acquired the new session token, and saved/released successfully at shutdown.
 
 See [fixture setup](validation-2.7.5.md) for the pinned client source. These checks do not cover Linux BDS, retail clients, production load, custom behavior packs, or simultaneous operation with pre-token writers. Stop and upgrade all sharing servers together: legacy flags cannot identify a live old server. Existing token-owned sessions and their pending saves remain protected.
