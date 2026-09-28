@@ -22,6 +22,7 @@ from .persistence import (
     InventoryStore, SnapshotJournal, SessionBusy, StaleSession,
     recover_pending, retryable_load_error,
 )
+from .native_sync import ensure_native, refresh_inventory
 
 # Endstone 0.11 exports NBT tag classes from endstone.nbt.
 from endstone.nbt import (
@@ -241,40 +242,45 @@ def _parse_saved_items(json_str):
     return items
 
 
-def load_inventory_from_json(json_str, inv, logger=None, server=None, player_name=None):
-    """Restore items from a JSON string into a PlayerInventory."""
-    items = _parse_saved_items(json_str)
+def _prepare_restore(items, slots, logger=None):
+    """Decode the complete target state before changing any live slots."""
+    restored = dict.fromkeys(slots)
     unresolved = []
-
-    # Clear all main inventory slots
-    for i in range(inv.size):
-        inv.clear(i)
-
-    # Clear armor and offhand slots
-    for attr_name in ARMOR_SLOTS.values():
-        setattr(inv, attr_name, ItemStack("minecraft:air", 1))
-
     for item_data in items:
-        slot = item_data.get("slot", 0)
+        slot = item_data["slot"]
+        if item_data.get("type") is None:
+            continue  # A later vaulted record may fill this initially empty slot.
         try:
+            if slot not in restored:
+                raise ValueError(f"Unsupported saved inventory slot {slot}")
             result = deserialize_item(item_data, logger=logger, context=f" (slot {slot})")
-
             if result is None:
-                if item_data.get("type") is not None:
-                    unresolved.append(item_data)
-                continue
-
-            if slot >= 0 and slot < inv.size:
-                inv.set_item(slot, result)
-            elif slot in ARMOR_SLOTS:
-                attr_name = ARMOR_SLOTS[slot]
-                setattr(inv, attr_name, result)
+                unresolved.append(item_data)
+            else:
+                restored[slot] = result
         except Exception as e:
             if logger:
-                logger.warning(f"[Inventory Load] Failed to restore slot {slot}: {e}")
-            if item_data.get("type") is not None:
-                unresolved.append(item_data)
+                logger.warning(f"[Inventory Load] Failed to decode slot {slot}: {e}")
+            unresolved.append(item_data)
+    return restored, unresolved
 
+
+def load_inventory_from_json(json_str, inv, logger=None, server=None, player_name=None):
+    """Restore each slot directly, preserving native IDs for unchanged stacks."""
+    items = _parse_saved_items(json_str)
+    restored, unresolved = _prepare_restore(items, [*range(inv.size), *ARMOR_SLOTS], logger)
+    # Clearing then reinserting an identical item changes its BDS stack ID,
+    # while the native inventory synchronizer can suppress the unchanged item
+    # update. The client then uses the old ID and equipment requests fail.
+    for slot in range(inv.size):
+        inv.set_item(slot, restored[slot])
+    for slot, attr_name in ARMOR_SLOTS.items():
+        setattr(inv, attr_name, restored[slot])
+    if server is not None:
+        refresh_inventory(inv)
+
+    # Let write failures reach the join guard: a partially applied inventory
+    # must never become ready for autosave over the original shared snapshot.
     return unresolved
 
 
@@ -308,24 +314,9 @@ def save_container_to_json(container, size, logger=None, vaulted_items=None):
 def load_container_from_json(json_str, container, logger=None, server=None, player_name=None):
     """Restore items from a JSON string into a generic container."""
     items = _parse_saved_items(json_str)
-    unresolved = []
-    container.clear()
-
-    for item_data in items:
-        slot = item_data.get("slot", 0)
-        try:
-            result = deserialize_item(item_data, logger=logger, context=f" (container slot {slot})")
-
-            if result is not None and slot >= 0 and slot < container.size:
-                container.set_item(slot, result)
-            elif result is None and item_data.get("type") is not None:
-                unresolved.append(item_data)
-        except Exception as e:
-            if logger:
-                logger.warning(f"[Inventory Load] Failed to restore container slot {slot}: {e}")
-            if item_data.get("type") is not None:
-                unresolved.append(item_data)
-
+    restored, unresolved = _prepare_restore(items, range(container.size), logger)
+    for slot, item in restored.items():
+        container.set_item(slot, item)
     return unresolved
 
 
@@ -748,20 +739,21 @@ class InventorySharePlugin(Plugin):
         # All DB jobs share one FIFO queue, including claim/load and final saves.
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="invshare")
         try:
+            ensure_native()
             self.journal = SnapshotJournal(Path(self.data_folder) / "pending-inventories.sqlite3")
             self.store = InventoryStore(self._connect, self.server_name)
             self._ensure_schema()
             if recover_pending(self.store, self.journal, self.logger):
                 raise RuntimeError("Pending inventories could not be recovered")
         except Exception as error:
-            self.logger.error(f"Inventory Share is not ready: {error}. Fix MySQL and restart; logins are blocked.")
+            self.logger.error(f"Inventory Share is not ready: {error}. Fix the reported runtime or storage issue and restart; logins are blocked.")
             return
         self._accepting = True
         self._autosave_task = self.server.scheduler.run_task(
             self, self._autosave, delay=self.autosave_seconds * 20,
             period=self.autosave_seconds * 20,
         )
-        self.logger.info(f"InventorySharePlugin v2.7.7 enabled; autosave every {self.autosave_seconds}s")
+        self.logger.info(f"InventorySharePlugin v2.7.8 enabled; autosave every {self.autosave_seconds}s")
         for player in self.server.online_players:
             # Hot enabling must use the same claim/restore path as a fresh join.
             self._begin_join(player)

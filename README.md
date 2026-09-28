@@ -1,14 +1,19 @@
 <p align="center"><img src="docs/assets/banner.svg" width="100%" alt="Endstone Inventory Share"></p>
 
-# Inventory Share v2.7.7
+# Inventory Share v2.7.8
 
 Share inventories, armor, offhand, ender chests, XP, Money scores, tags, and per-server locations through MySQL/MariaDB. Item NBT and unresolved custom items are preserved in JSON storage.
 
-**v2.7.7 automatically recovers legacy login locks on join.** Players previously kicked with `INV-LEGACY` can reconnect without an administrator command. The plugin atomically replaces the old tokenless flag with a protected session and restores the saved inventory. Existing session tokens remain protected, including pending saves from another server. Upgrade all servers sharing the database together.
+**v2.7.8 fixes rejected offhand and armor moves after a shared inventory restore.** The old clear/reinsert sequence could leave the client holding stale native stack IDs. Restore now assigns final slots directly and asks Bedrock to publish its native inventory state. Players do not need to empty their inventory or die. The bundled C++ helper requires the qualified **BDS 1.26.51.1 x86-64** binary and **Endstone 0.11.11 or 0.11.12**; install the wheel for your server OS. Automatic legacy-lock recovery and shutdown protection remain enabled.
 
-[Download](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.7) · [Recovery guide](docs/recovery.md) · [Validation](docs/validation-2.7.7.md) · [Changelog](CHANGELOG.md) · [日本語](README_JP.md)
+[Download](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.8) · [Recovery guide](docs/recovery.md) · [Validation](docs/validation-2.7.8.md) · [Changelog](CHANGELOG.md) · [日本語](README_JP.md)
 
 ## What changed
+
+- Restore inventory and equipment without clearing and recreating unchanged stacks.
+- Send native inventory contents after restore so changed items receive the correct client stack IDs.
+- Preserve unresolved/out-of-range custom items in the vault and propagate slot-write failures to the join guard.
+- Verify the BDS executable hash and Endstone version before loading the native helper.
 
 - Retries temporary load failures without blocking the server thread or allowing inventory actions before restore finishes.
 - Recovers pending saves belonging to disconnected local sessions before joining and during periodic saves, without releasing active sessions.
@@ -26,14 +31,16 @@ Share inventories, armor, offhand, ender chests, XP, Money scores, tags, and per
 ## Install or upgrade
 
 1. Back up the shared database, worlds, and Inventory Share's plugin data directories.
-2. Stop **all servers sharing the database** before upgrading. Replace the old wheel on every server with v2.7.7; do not mix older writers with this version.
+2. Stop **all servers sharing the database** before upgrading. Replace the old wheel on every server with the matching v2.7.8 platform wheel; do not mix older writers with this version.
 3. Keep each server's existing plugin data directory and configuration. Start one server in maintenance mode to run the additive schema migration, then check the console for errors. Migration adds `session_token` and normalizes the old text login flag without deleting inventories.
 4. Legacy flags left after an old reboot recover automatically when each affected player joins. No per-player command or configuration change is needed. The old flag cannot identify a live pre-token server, so those old servers must stay stopped until upgraded.
 5. Start the other servers, allow players to reconnect, and use the console's `stop` command for planned restarts.
 
 ```sh
-gh release download v2.7.7 --repo TheNINJALLO/endstone-inventory-share-plugin --pattern "*.whl"
+gh release download v2.7.8 --repo TheNINJALLO/endstone-inventory-share-plugin --pattern "*linux_x86_64.whl"
 ```
+
+For Windows, use `--pattern "*win_amd64.whl"` instead. Install only one Inventory Share wheel. An unsupported runtime logs `Inventory Share is not ready` and blocks logins before restoring inventories; update the runtime to the supported build instead of bypassing the check. After restarting, affected players can reconnect normally.
 
 For a new installation, place the wheel in `plugins/`, start once to create the configuration, enter your database settings, then restart. The plugin creates/migrates its schema; `create_db.sql` is also supplied for initial setup. Use an InnoDB table. The schema migration account needs CREATE/ALTER privileges as well as SELECT/INSERT/UPDATE.
 
@@ -59,7 +66,7 @@ join_wait_seconds = 15
 
 | Code | Meaning / action |
 |---|---|
-| `INV-LEGACY` (older releases) | Upgrade all sharing servers to v2.7.7. The next join automatically recovers this tokenless flag; v2.7.7 no longer emits this error. |
+| `INV-LEGACY` (older releases) | Upgrade all sharing servers to v2.7.8. The next join automatically recovers this tokenless flag; v2.7.8 no longer emits this error. |
 | `INV-BUSY` | The previous server still owns the inventory after the retry window. Check that server's pending saves and connectivity; do not forcibly clear its lock. |
 | `INV-DB` | Database access failed. The console records the actual MySQL error. |
 | `INV-DATA` | The inventory/vault could not be restored. The console now includes the underlying exception; keep the stored data for repair. |
@@ -89,9 +96,10 @@ This update cannot reconstruct items already overwritten by an older release. Re
 
 | Component | Requirement / validation |
 |---|---|
-| Endstone | `>=0.11.9,<0.12`, API `0.11`; live validation on `0.11.11` |
-| BDS | Version supported by your Endstone runtime; live validation on Windows `1.26.51.1` |
-| Python | `>=3.10` |
+| Endstone | `0.11.11` or `0.11.12`, API `0.11`; Windows tested on `0.11.11`, Linux on `0.11.12` |
+| BDS | Exactly `1.26.51.1` x86-64, Windows or Linux; executable SHA-256 checked at startup |
+| Python | CPython `>=3.10`; stable-ABI native wheel; live tested on Windows 3.11 and Linux 3.14 |
+| Linux OS | glibc 2.39 or newer (Ubuntu 24.04 build); Alpine/musl is unsupported |
 | Database | MySQL/MariaDB with InnoDB; tests use MariaDB `11.4` |
 | Commands | Saving/restoring is automatic; `invshare recoverlegacy` is console-only |
 
@@ -99,8 +107,8 @@ The optional bundle companion remains version/API dependent. Its Script API fall
 
 ## Development and releases
 
-Run `python -m pytest` after installing this project and pytest. Set `INVSHARE_TEST_PORT` (and optionally `INVSHARE_TEST_HOST`, `INVSHARE_TEST_USER`, `INVSHARE_TEST_PASSWORD`) to a disposable MariaDB instance to run the integration tests. **These tests reset the `invshare_test.player_data` table.** See [validation](docs/validation-2.7.7.md) for the real-server runner.
+Install the test dependencies directly (`endstone`, `PyMySQL`, `pycryptodome`, `pytest`, `ruff`), then run `python -m pytest`. Building a wheel requires the native helper: see [native build instructions](native/README.md). Set `INVSHARE_TEST_PORT` (and optionally `INVSHARE_TEST_HOST`, `INVSHARE_TEST_USER`, `INVSHARE_TEST_PASSWORD`) to a disposable MariaDB instance to run the integration tests. **These tests reset the `invshare_test.player_data` table.** See [validation](docs/validation-2.7.8.md) for the real-server runner.
 
-GitHub Actions runs the automated and database tests before building and uploading a tagged release wheel. The repository's `docs/` directory contains the maintained operational guides; this repository does not have a separate enabled GitHub wiki.
+GitHub Actions runs the automated and database tests on Python 3.11 and 3.14 and builds separate Linux/Windows native wheels. Tagged releases publish only after those jobs pass. Live BDS equipment and recovery qualification is recorded separately in the validation guide. The repository's `docs/` directory contains the maintained operational guides; this repository does not have a separate enabled GitHub wiki.
 
 Licensed under Apache-2.0. Original plugin by Kuma3mccm.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.7.8 - 2026-09-27
+
+- Fix native stack-ID desynchronization after restore that rejects offhand and armor equipment requests.
+- Assign final slots directly and publish Bedrock inventory contents through a bundled C++ bridge.
+- Gate the bridge on qualified BDS 1.26.51.1 executable hashes and Endstone 0.11.11/0.11.12.
+- Preserve unsupported saved slots in the unresolved vault; propagate native slot-write failures instead of marking partial restores ready.
+- Add native Linux/Windows packaging, full-inventory equipment regression fixtures, and runtime compatibility tests.
+- Retain and recheck automatic legacy recovery, shutdown capture, crash journals, and multi-server handoff protection.
+
 ## 2.7.7 — 2026-09-21
 
 - Automatically recover tokenless legacy login flags on join, replacing `INV-LEGACY` kicks and per-player console intervention.

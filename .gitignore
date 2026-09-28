@@ -43,3 +43,6 @@ vendor/
 scratch/
 .tox/
 *.whl
+*.dll
+*.so
+**/CMakeUserPresets.json

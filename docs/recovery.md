@@ -68,3 +68,13 @@ This does not recover inventories already rolled back by an earlier release. For
 Force-killing the process does not run a shutdown hook. The last completed periodic snapshot is recoverable, but later changes may be lost. OS signals and third-party code calling the shutdown API directly can also bypass the `stop` command capture. Ask those integrations to issue the native console command. The autosave interval is measured in server ticks; lag, disk failures, and long database queues can extend it.
 
 The companion's Script API bundle fallback is asynchronous and version dependent. It is not a substitute for a complete native NBT snapshot. Keep existing behavior packs and validate their custom items separately.
+
+## Offhand or armor cannot be equipped after restore
+
+Upgrade all sharing servers to v2.7.8 using the wheel for each server OS. The qualified runtime is BDS 1.26.51.1 x86-64 with Endstone 0.11.11 or 0.11.12. Keep the database, configuration, and recovery journal. Restart, then reconnect affected players; no inventory clearing or death is needed.
+
+Inventory Share 2.7.7 reproduced native `FailedToValidateSrcSlot` (status 49) on equipment requests after restoring an identical inventory. The client had the previous stack IDs. Version 2.7.8 restores final slots directly and invokes Bedrock's inventory send routine, including when the shared inventory differs from the local one.
+
+If startup reports an unsupported native runtime, use the qualified BDS/Endstone build. Do not edit the executable allowlist or disable the guard. New BDS builds require rebuilt headers and live qualification. Missing DLL/SO errors usually mean the wrong or incomplete platform wheel was installed.
+
+[Release validation and limits](validation-2.7.8.md) documents the reproduced case. Other plugins that intercept inventory requests can cause separate problems; this reproduction establishes Inventory Share as one confirmed cause.

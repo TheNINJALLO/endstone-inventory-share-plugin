@@ -1,0 +1,15 @@
+Inventory Share native inventory synchronization bridge
+
+Built using Endstone v0.11.12 (commit 1c71186cba896c5e0bc432384a8a8e72dfb2a626).
+Copyright (c) 2023, The Endstone Project. Apache License 2.0.
+https://github.com/EndstoneMC/endstone
+The build substitutes two formatting expressions in bedrock/platform/result.h
+for standalone compiler compatibility. No inventory method or ABI layout is changed.
+
+Build/header dependencies: Boost 1.91.0, EnTT 3.16.0, expected-lite 0.9.0,
+GLM 1.0.3, Microsoft GSL 4.2.2, Endstone RakNet 4.081-mojang (r26u3),
+and pybind11 3.0.1. Linux bundles LLVM libc++/libc++abi 20.
+Corresponding copyright notices and license texts accompany this file in licenses/.
+
+The bridge source and reproducible build recipe are in the Inventory Share
+repository's native/ directory. No Bedrock server executable is distributed.
