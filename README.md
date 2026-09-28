@@ -99,7 +99,7 @@ This update cannot reconstruct items already overwritten by an older release. Re
 | Endstone | `0.11.11` or `0.11.12`, API `0.11`; Windows tested on `0.11.11`, Linux on `0.11.12` |
 | BDS | Exactly `1.26.51.1` x86-64, Windows or Linux; executable SHA-256 checked at startup |
 | Python | CPython `>=3.10`; stable-ABI native wheel; live tested on Windows 3.11 and Linux 3.14 |
-| Linux OS | glibc 2.39 or newer (Ubuntu 24.04 build); Alpine/musl is unsupported |
+| Linux OS | glibc 2.35 or newer (Ubuntu 22.04 build); Alpine/musl is unsupported |
 | Database | MySQL/MariaDB with InnoDB; tests use MariaDB `11.4` |
 | Commands | Saving/restoring is automatic; `invshare recoverlegacy` is console-only |
 

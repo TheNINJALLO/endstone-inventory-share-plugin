@@ -14,7 +14,7 @@ conan remote add endstone https://conan.cloudsmith.io/endstone/conan/ --force
 python scripts/build_native.py --output scratch/native
 ```
 
-Set `INVSHARE_NATIVE_LIBRARY` to `scratch/native/inventory_sync.so` (Linux) or `scratch/native/inventory_sync.dll` (Windows), then run `python -m build --wheel`. The build refuses to package a wheel without the helper. Linux release builds use Ubuntu 24.04 and static libc++; glibc 2.39+ is required. No BDS server files are included in the wheel.
+Set `INVSHARE_NATIVE_LIBRARY` to `scratch/native/inventory_sync.so` (Linux) or `scratch/native/inventory_sync.dll` (Windows), then run `python -m build --wheel`. The build refuses to package a wheel without the helper. Linux release builds use Ubuntu 22.04 and static libc++; glibc 2.35+ is required. No BDS server files are included in the wheel.
 
 `CMakeLists.txt` fetches Endstone commit `1c71186cba896c5e0bc432384a8a8e72dfb2a626`. Two unsupported formatting expressions in the SDK's `result.h` are replaced for compilation; layouts and inventory behavior are unchanged. `--sdk` may use an already checked-out copy of that same commit. Dependency versions and the RakNet recipe revision are pinned in `conanfile.py`.
 

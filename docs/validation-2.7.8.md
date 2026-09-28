@@ -20,7 +20,7 @@ Local candidate wheels passed these checks. Final release artifact results, SHA-
 | Linux x86-64 BDS 1.26.51.1 | `e93e739f373a84edfff7c9cd76fcb090c2176744b412e1143f1b38e91a49bed4` |
 | Windows x86-64 BDS 1.26.51.1 | `76d547f82e02c18d0986c30b47132c9cc4171d0f2df1c00649e50ff35788b321` |
 
-Endstone 0.11.11 and 0.11.12 are accepted; the live platform pairings above were tested. Linux wheels require glibc 2.39+. The CPython stable ABI supports 3.10+; live tests cover 3.11 and 3.14.
+Endstone 0.11.11 and 0.11.12 are accepted; the live platform pairings above were tested. Linux wheels require glibc 2.35+. The CPython stable ABI supports 3.10+; live tests cover 3.11 and 3.14.
 
 ## Scope
 
