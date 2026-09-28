@@ -11,7 +11,15 @@ The released v2.7.7 wheel (SHA-256 `1ebe93fbff8ecd846e97077475a726150417b16dda73
 - Full 36-slot inventory; totem and shield offhand moves; all four armor slots; identical and different-inventory restores; occupied equipment; empty snapshots; names and lore; server/client item agreement.
 - Windows SQL lifecycle fixture: stop/restart, forced kill and journal recovery, transient database failure, busy handoff, pending local saves, NULL/empty legacy flags, and preservation of invalid optional metadata (ten phases).
 
-Local candidate wheels passed these checks. Final release artifact results, SHA-256 values, and CI provenance are recorded alongside this page in `validation/` and attached to the GitHub release after qualification.
+**Both final GitHub-built platform wheels passed live qualification.** The exact SHA-256 values match the uploaded release assets. The [tag build](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/actions/runs/36372879818) passed both Python/MariaDB test jobs and both native build jobs.
+
+- [Linux equipment results](validation/2.7.8-equipment-linux.json)
+- [Windows equipment results](validation/2.7.8-equipment-windows.json)
+- [Windows shutdown/recovery: all ten phases](validation/2.7.8-windows-shutdown.json)
+- [Original v2.7.7 failure reproduction](validation/2.7.8-regression-v2.7.7-linux.json)
+- [Release checksums](validation/2.7.8-SHA256SUMS.txt)
+
+The release stayed in draft until these artifact checks passed. The reports and checksums are also attached to the GitHub release.
 
 ## Runtime profiles
 

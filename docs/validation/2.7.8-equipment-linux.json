@@ -1,0 +1,25 @@
+{
+  "platform": "linux",
+  "python": "3.14.7",
+  "wheel_sha256": "cf022ba09726e40bedd9646d5d98b1ecb55669f6901674cf5d732ae1c8050756",
+  "checks": [
+    "baseline: totem and all four armor slots equip/unequip with native IDs",
+    "identical restore: full inventory, totem, shield, four armor slots, names and lore preserved",
+    "occupied equipment survives restore and remains movable",
+    "different local inventory replaced, native client updates allow all equipment actions",
+    "empty snapshot clears every slot and subsequent equipment works"
+  ],
+  "server_exit": 0,
+  "passed": true,
+  "provenance": {
+    "source_commit": "d54635c045274b9667a0f9775ab34438633b98c6",
+    "tag": "v2.7.8",
+    "build_run": "https://github.com/TheNINJALLO/endstone-inventory-share-plugin/actions/runs/36372879818",
+    "recorded_at_utc": "2026-09-28T03:20:20.117112+00:00",
+    "bds_version": "1.26.51.1",
+    "client": "tests/live/client (Gophertunnel 1.62, Go 1.26)",
+    "scope": "Disposable real BDS with an automated protocol client; not retail device or production multi-plugin validation.",
+    "endstone": "0.11.12",
+    "wheel": "endstone_inventory_share_plugin-2.7.8-cp310-abi3-linux_x86_64.whl"
+  }
+}

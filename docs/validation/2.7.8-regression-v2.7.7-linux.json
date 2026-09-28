@@ -1,0 +1,22 @@
+{
+  "platform": "linux",
+  "python": "3.14.7",
+  "wheel_sha256": "1ebe93fbff8ecd846e97077475a726150417b16dda73d9197892223bde65ca1b",
+  "checks": [
+    "baseline: totem and all four armor slots equip/unequip with native IDs",
+    "old restore reproduced offhand rejection: native status 49"
+  ],
+  "server_exit": 0,
+  "passed": true,
+  "provenance": {
+    "source_commit": "d54635c045274b9667a0f9775ab34438633b98c6",
+    "tag": "v2.7.8",
+    "build_run": "Original released v2.7.7 wheel; current fixture reproduces rejection status 49.",
+    "recorded_at_utc": "2026-09-28T03:20:20.117112+00:00",
+    "bds_version": "1.26.51.1",
+    "client": "tests/live/client (Gophertunnel 1.62, Go 1.26)",
+    "scope": "Disposable real BDS with an automated protocol client; not retail device or production multi-plugin validation.",
+    "endstone": "0.11.12",
+    "tested_wheel_version": "2.7.7"
+  }
+}
