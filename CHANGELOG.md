@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.7.10 - 2026-10-06
+
+- Support Endstone 0.11.13 with BDS 1.26.52.3 on Linux and Windows x86-64.
+- Rebuild the native inventory synchronization helper against the pinned 0.11.13 SDK.
+- Update Endstone dependencies and executable hash checks; reject old or unknown native runtime profiles.
+- Preserve missing-facade import fixes, automatic recovery, inventory serialization, and shutdown/crash protections.
+
 ## 2.7.9 - 2026-10-06
 
 - Resolve Location and ItemStack from Endstone native exports when Python facade packages are missing.

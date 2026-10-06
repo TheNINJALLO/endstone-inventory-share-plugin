@@ -28,6 +28,7 @@ def main():
     parser.add_argument("--client", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--db-port", type=int, required=True)
+    parser.add_argument("--db-host", default="127.0.0.1")
     parser.add_argument("--database", default="invshare_live")
     parser.add_argument("--join-cases", action="store_true", help="Also test handoff, DB retries, local recovery, legacy locks/tags")
     args = parser.parse_args()
@@ -78,10 +79,13 @@ def main():
         "client-side-chunk-generation-enabled=false\ntransport=nethernet\n")
     (server / "endstone.toml").write_text("[settings]\n")
     (server / "plugins").mkdir(exist_ok=True)
-    if os.name != "nt":
-        parser.error("This live runner currently supports the supplied Windows BDS fixture")
-    from endstone.cli.windows import WindowsBootstrap, PopenWithDll
-    boot = WindowsBootstrap(str(server), True, "", False)
+    if os.name == "nt":
+        from endstone.cli.windows import WindowsBootstrap as Bootstrap, PopenWithDll
+        process_class = PopenWithDll
+    else:
+        from endstone.cli.linux import LinuxBootstrap as Bootstrap
+        process_class = subprocess.Popen
+    boot = Bootstrap(str(server), True, "", False)
     report = {"platform": sys.platform, "wheel_sha256": hashlib.sha256(args.wheel.read_bytes()).hexdigest(), "phases": []}
     phases = ["seed", "restore", "crash", "restore"]
     if args.join_cases:
@@ -92,10 +96,12 @@ def main():
         env = boot._endstone_runtime_env.copy()
         env.update(PYTHONPATH=str(probe) + os.pathsep + env["PYTHONPATH"],
                    INVSHARE_PROBE_PREFIX=sys.prefix, PYTHONNOUSERSITE="1",
-                   INVSHARE_LIVE_DB_PORT=str(args.db_port), INVSHARE_LIVE_OUTPUT=str(phase_output),
+                   INVSHARE_LIVE_DB_PORT=str(args.db_port), INVSHARE_LIVE_DB_HOST=args.db_host,
+                   INVSHARE_LIVE_OUTPUT=str(phase_output),
                    INVSHARE_LIVE_PHASE=phase, INVSHARE_LIVE_DATABASE=args.database)
-        process = PopenWithDll([str(boot.executable_path)], cwd=server, env=env,
-                              dll_names=str(boot._endstone_runtime_path), creationflags=subprocess.CREATE_NO_WINDOW,
+        options = {"dll_names": str(boot._endstone_runtime_path),
+                   "creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
+        process = process_class([str(boot.executable_path)], cwd=server, env=env, **options,
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True, encoding="utf-8", errors="replace")
         lines = []
@@ -113,7 +119,7 @@ def main():
                     client = subprocess.Popen([str(args.client.resolve()), "-transport", "lan", "-address",
                                                "127.0.0.1:39421", "-names", "InventoryTest", "-duration", "120s"],
                                               stdout=client_log, stderr=subprocess.STDOUT,
-                                              creationflags=subprocess.CREATE_NO_WINDOW)
+                                              creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
                 if (phase_output / "probe.json").exists():
                     break
                 time.sleep(0.2)
@@ -142,7 +148,7 @@ def main():
             if phase in {"legacy-null", "legacy-empty"}:
                 assert any("Automatically recovered legacy inventory lock" in line for line in lines)
                 result["automatic_legacy_recovery_verified"] = True
-            conn = pymysql.connect(host="127.0.0.1", port=args.db_port, user="root", database=args.database)
+            conn = pymysql.connect(host=args.db_host, port=args.db_port, user="root", database=args.database)
             try:
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT player_inv,player_enderchest,player_xp_level,is_logged_in,session_token FROM player_data")

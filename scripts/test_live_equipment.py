@@ -46,7 +46,7 @@ def main():
         "server-name=Paradox acceptance test\nlevel-name=paradox-acceptance\n"
         "server-port=39431\nserver-portv6=39432\nonline-mode=false\nallow-cheats=true\n"
         "gamemode=survival\ndifficulty=peaceful\nlevel-type=FLAT\nview-distance=4\n"
-        "tick-distance=4\nemit-server-telemetry=false\ntransport=nethernet\n")
+        "tick-distance=4\nenable-lan-visibility=true\nemit-server-telemetry=false\ntransport=nethernet\n")
     (server / "endstone.toml").write_text("[settings]\n")
     with ZipFile(args.wheel) as wheel:
         for info in wheel.infolist():

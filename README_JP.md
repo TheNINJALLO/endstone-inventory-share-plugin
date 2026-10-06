@@ -1,16 +1,16 @@
-# Inventory Share v2.7.9
+# Inventory Share v2.7.10
 
 Endstone サーバー間でインベントリ、防具、オフハンド、エンダーチェスト、経験値などを MySQL/MariaDB に保存・共有するプラグインです。
 
-[English / 詳細な設定手順](README.md) · [リリース](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.9)
+[English / 詳細な設定手順](README.md) · [リリース](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.10)
 
 ## オフハンド・防具の操作修正
 
-v2.7.9 は、`endstone.level` または `endstone.inventory` が見つからない環境でのプラグイン読み込みエラーを修正します。`Location` と `ItemStack` は Endstone のネイティブ API から取得します。ネイティブ同期の対応環境は、引き続き Endstone 0.11.11 / 0.11.12 と BDS 1.26.51.1 です。
+v2.7.10 は、`endstone.level` または `endstone.inventory` が見つからない環境でのプラグイン読み込みエラーを修正します。`Location` と `ItemStack` は Endstone のネイティブ API から取得します。ネイティブ同期の対応環境は、引き続き Endstone 0.11.13 と BDS 1.26.52.3 です。
 
 v2.7.8 の共有インベントリ復元後のオフハンド・防具同期修正も維持します。各スロットを直接復元し、Bedrock 自身のインベントリ更新でクライアントのアイテム ID を同期します。インベントリを空にしたり、死亡したりする必要はありません。
 
-同梱の C++ ヘルパーは **BDS 1.26.51.1 x86-64** と **Endstone 0.11.11 / 0.11.12** に対応します。Linux は `linux_x86_64.whl`（glibc 2.35 以降）、Windows は `win_amd64.whl` を使用してください。実行ファイルのハッシュを確認し、未対応の環境ではログインを停止して保存データを保護します。全共有サーバーの古い wheel を置き換えて再起動し、プレイヤーは再接続してください。
+同梱の C++ ヘルパーは **BDS 1.26.52.3 x86-64** と **Endstone 0.11.13** に対応します。Linux は `linux_x86_64.whl`（glibc 2.35 以降）、Windows は `win_amd64.whl` を使用してください。実行ファイルのハッシュを確認し、未対応の環境ではログインを停止して保存データを保護します。全共有サーバーの古い wheel を置き換えて再起動し、プレイヤーは再接続してください。
 
 ## ログイン時の切断修正
 
@@ -29,13 +29,13 @@ Bedrock はプラグインの終了処理より先にプレイヤーを削除す
 ## 更新方法
 
 1. データベース、ワールド、プラグインのデータをバックアップします。
-2. 同じデータベースを使用する全サーバーを停止し、全ての古い wheel を v2.7.9 に置き換えます。旧バージョンとの混在運用はしないでください。
+2. 同じデータベースを使用する全サーバーを停止し、全ての古い wheel を v2.7.10 に置き換えます。旧バージョンとの混在運用はしないでください。
 3. 既存の設定とデータを残し、メンテナンス状態で起動してスキーマ更新を確認します。
 4. プレイヤーの参加を再開します。トークンのない旧ロックは、対象プレイヤーの次回ログイン時に自動復旧されます。
 5. 管理パネルの再起動処理は `stop` を送信し、プロセス終了まで待つよう設定します。
 
 `config.toml` の `autosave_seconds = 30` で定期保存間隔を設定できます（最小5秒）。強制終了や電源断では最後の完全なスナップショット以降の変更を失う場合があります。既に失われたアイテムは、この更新だけでは復元できません。
 
-Endstone API 0.11、Python 3.10以上、InnoDB を使用する MySQL/MariaDB が必要です。実サーバー検証は Windows BDS 1.26.51.1 / Endstone 0.11.11 を使用します。詳細と制限は [検証記録](docs/validation-2.7.8.md) を参照してください。
+Endstone API 0.11、Python 3.10以上、InnoDB を使用する MySQL/MariaDB が必要です。実サーバー検証は Windows BDS 1.26.52.3 / Endstone 0.11.13 を使用します。詳細と制限は [検証記録](docs/validation-2.7.10.md) を参照してください。
 
 Original plugin by Kuma3mccm. Apache License 2.0.

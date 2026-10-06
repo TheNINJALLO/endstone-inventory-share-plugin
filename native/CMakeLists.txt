@@ -1,14 +1,13 @@
 cmake_minimum_required(VERSION 3.29)
-project(inventory_sync VERSION 0.11.12 LANGUAGES CXX)
+project(inventory_sync VERSION 0.11.13 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(FetchContent)
-# Endstone v0.11.12, BDS 1.26.51.1. The inventory wrapper layout is also
-# unchanged in v0.11.11; both runtime profiles are tested before release.
+# Endstone v0.11.13, BDS 1.26.52.3. Compile against the exact runtime SDK.
 FetchContent_Declare(endstone
     GIT_REPOSITORY https://github.com/EndstoneMC/endstone.git
-    GIT_TAG 1c71186cba896c5e0bc432384a8a8e72dfb2a626
+    GIT_TAG 3491c609ddfde392cee2b062e3063e39aae87274
     SOURCE_SUBDIR inventory-sync-no-subproject)
 FetchContent_MakeAvailable(endstone)
 find_package(Python3 COMPONENTS Interpreter Development.SABIModule REQUIRED)
@@ -30,7 +29,7 @@ if(NOT result_text MATCHES "Inventory Share standalone formatting compatibility"
     string(PREPEND result_text "// Inventory Share standalone formatting compatibility: two format expressions changed.\n")
 endif()
 file(WRITE "${result_header}" "${result_text}")
-set(ENDSTONE_VERSION_FULL "0.11.12")
+set(ENDSTONE_VERSION_FULL "0.11.13")
 configure_file("${endstone_SOURCE_DIR}/include/endstone/version.h.in" "include/endstone/version.h" @ONLY)
 
 add_library(inventory_sync SHARED refresh.cpp

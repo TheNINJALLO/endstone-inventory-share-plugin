@@ -31,7 +31,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install 'endstone>=0.11.11,<0.11.13' PyMySQL pycryptodome pytest ruff
+      - run: python -m pip install 'endstone>=0.11.13,<0.11.14' PyMySQL pycryptodome pytest ruff
       - name: Run lifecycle and MariaDB regression tests
         env:
           INVSHARE_TEST_PORT: "3306"
@@ -58,7 +58,7 @@ jobs:
           python-version: "3.11"
       - name: Linux Clang and libc++
         if: runner.os == 'Linux'
-        uses: EndstoneMC/endstone/.github/actions/setup-clang@1c71186cba896c5e0bc432384a8a8e72dfb2a626
+        uses: EndstoneMC/endstone/.github/actions/setup-clang@3491c609ddfde392cee2b062e3063e39aae87274
         with:
           llvm-version: "20"
       - uses: ilammy/msvc-dev-cmd@v1
@@ -95,5 +95,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "docs/releases/$GITHUB_REF_NAME.md"
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --notes-file "docs/releases/$GITHUB_REF_NAME.md"
           gh release upload "$GITHUB_REF_NAME" dist/*.whl --clobber

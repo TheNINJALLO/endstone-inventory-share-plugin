@@ -20,7 +20,8 @@ class Probe(InventorySharePlugin):
         pass
 
     def load_config(self):
-        self.sql_host, self.sql_port = "127.0.0.1", int(os.environ["INVSHARE_LIVE_DB_PORT"])
+        self.sql_host = os.environ.get("INVSHARE_LIVE_DB_HOST", "127.0.0.1")
+        self.sql_port = int(os.environ["INVSHARE_LIVE_DB_PORT"])
         self.sql_user, self.sql_pass = "root", ""
         self.sql_db_name = os.environ.get("INVSHARE_LIVE_DATABASE", "invshare_live")
         self.server_name, self.autosave_seconds = "test-server", 30

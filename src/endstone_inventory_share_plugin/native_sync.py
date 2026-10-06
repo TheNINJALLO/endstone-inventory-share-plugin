@@ -10,8 +10,8 @@ import sys
 # Exact server binaries used by the release's live tests. Private BDS virtual
 # calls must not run on an unqualified binary merely because an API version fits.
 PROFILES = {
-    "linux": ("inventory_sync.so", "e93e739f373a84edfff7c9cd76fcb090c2176744b412e1143f1b38e91a49bed4"),
-    "win32": ("inventory_sync.dll", "76d547f82e02c18d0986c30b47132c9cc4171d0f2df1c00649e50ff35788b321"),
+    "linux": ("inventory_sync.so", "0a490c711d4a2ce075debcd979e8862b7eaba008373f9970f0edbb67f98f9207"),
+    "win32": ("inventory_sync.dll", "19c88569af2e4b7d984e999055a31cbcb0799dacf8bbbf7371eda42f5772a443"),
 }
 _library = None
 
@@ -35,16 +35,16 @@ def ensure_native():
     if _library is not None:
         return _library
     if sys.platform not in PROFILES or platform.machine().lower() not in {"amd64", "x86_64"}:
-        raise RuntimeError("Inventory Share requires Windows/Linux x86-64 BDS 1.26.51.1")
-    if version("endstone") not in {"0.11.11", "0.11.12"}:
-        raise RuntimeError("Inventory refresh requires Endstone 0.11.11 or 0.11.12 with BDS 1.26.51.1")
+        raise RuntimeError("Inventory Share requires Windows/Linux x86-64 BDS 1.26.52.3")
+    if version("endstone") not in {"0.11.13"}:
+        raise RuntimeError("Inventory refresh requires Endstone 0.11.13 with BDS 1.26.52.3")
     filename, expected = PROFILES[sys.platform]
     digest = hashlib.sha256()
     with _executable().open("rb") as executable:
         for chunk in iter(lambda: executable.read(1024 * 1024), b""):
             digest.update(chunk)
     if digest.hexdigest() != expected:
-        raise RuntimeError("Unsupported Bedrock binary for native inventory refresh; use the qualified BDS 1.26.51.1 build")
+        raise RuntimeError("Unsupported Bedrock binary for native inventory refresh; use the qualified BDS 1.26.52.3 build")
     # PyDLL retains the GIL, propagates CPython errors, and allows native send
     # callbacks to enter Endstone's Python packet listeners on the server thread.
     library = ctypes.PyDLL(str(Path(__file__).parent / "_native" / filename))
