@@ -1,7 +1,7 @@
 """Test a wheel on disposable BDS: stop/restart, then failed-save/crash/recovery.
 
 Requires Endstone, PyMySQL, a disposable MariaDB on loopback, and the scripted
-gophertunnel client from endstone-paradox/native/tests/bedrock-client (v2.0.1).
+gophertunnel client from tests/live/client.
 The runner overwrites only a NEW scratch server copied from supplied BDS files.
 """
 import argparse
@@ -26,6 +26,8 @@ def main():
     parser.add_argument("--server", type=Path, required=True)
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--client", type=Path, required=True)
+    parser.add_argument("--client-address", default="127.0.0.1:39421")
+    parser.add_argument("--client-transport", choices=("lan", "raknet"), default="lan")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--db-port", type=int, required=True)
     parser.add_argument("--db-host", default="127.0.0.1")
@@ -76,7 +78,8 @@ def main():
         "server-port=39421\nserver-portv6=39422\nonline-mode=false\nallow-list=false\n"
         "allow-cheats=true\ngamemode=creative\ndifficulty=peaceful\nview-distance=4\n"
         "tick-distance=4\nenable-lan-visibility=true\nemit-server-telemetry=false\n"
-        "client-side-chunk-generation-enabled=false\ntransport=nethernet\n")
+        "client-side-chunk-generation-enabled=false\n"
+        f"transport={'nethernet' if args.client_transport == 'lan' else 'raknet'}\n")
     (server / "endstone.toml").write_text("[settings]\n")
     (server / "plugins").mkdir(exist_ok=True)
     if os.name == "nt":
@@ -116,8 +119,8 @@ def main():
             deadline = time.monotonic() + 150
             while time.monotonic() < deadline and process.poll() is None:
                 if client is None and any("Server started" in line for line in lines):
-                    client = subprocess.Popen([str(args.client.resolve()), "-transport", "lan", "-address",
-                                               "127.0.0.1:39421", "-names", "InventoryTest", "-duration", "120s"],
+                    client = subprocess.Popen([str(args.client.resolve()), "-transport", args.client_transport, "-address",
+                                               args.client_address, "-names", "InventoryTest", "-duration", "120s"],
                                               stdout=client_log, stderr=subprocess.STDOUT,
                                               creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
                 if (phase_output / "probe.json").exists():

@@ -18,7 +18,15 @@ Both server downloads are verified against the archive hashes in Endstone's serv
 - Native equipment fixture: a full inventory; totem and shield offhand moves; all four armor slots; identical and different-inventory restores; occupied equipment; empty snapshots; item names and lore; agreement between the server and client.
 - SQL lifecycle fixture: stop/restart, forced kill and journal recovery, transient database failure, busy handoff, local recovery, NULL/empty legacy flags, and invalid optional metadata (ten phases).
 
-Local Linux equipment checks passed on Python 3.13 and 3.14; the local Linux SQL lifecycle fixture passed all ten phases. Release wheels remain in draft until their live checks finish. The final artifact reports and checksums are attached to the published release.
+Both GitHub-built platform wheels passed the equipment fixture and all ten shutdown/recovery phases. Linux was qualified with Python 3.13.16 and NetherNet LAN discovery; Windows with Python 3.11.9 and direct RakNet requests. NetherNet loopback discovery was unavailable in the Windows fixture. Local Linux equipment checks also passed on Python 3.14.7.
+
+The [GitHub build](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/actions/runs/37517336344) passed all three Python/MariaDB jobs and both native build jobs. The published wheels are these exact live-tested artifacts; production Python/native source matches the release tag. Checksums are verified again after upload.
+
+- [Linux equipment](validation/2.7.10-equipment-linux.json)
+- [Windows equipment](validation/2.7.10-equipment-windows.json)
+- [Linux shutdown/recovery](validation/2.7.10-shutdown-linux.json)
+- [Windows shutdown/recovery](validation/2.7.10-shutdown-windows.json)
+- [Release checksums](validation/2.7.10-SHA256SUMS.txt)
 
 ## Scope and reproduction
 

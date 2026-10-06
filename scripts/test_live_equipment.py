@@ -18,6 +18,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--client", type=Path, required=True)
+    parser.add_argument("--client-address", default="127.0.0.1:39431")
+    parser.add_argument("--client-transport", choices=("lan", "raknet"), default="lan")
     parser.add_argument("--expect-rejection", action="store_true", help="Reproduce the old wheel's stale-ID failure")
     args = parser.parse_args()
     out = args.output.resolve()
@@ -46,7 +48,8 @@ def main():
         "server-name=Paradox acceptance test\nlevel-name=paradox-acceptance\n"
         "server-port=39431\nserver-portv6=39432\nonline-mode=false\nallow-cheats=true\n"
         "gamemode=survival\ndifficulty=peaceful\nlevel-type=FLAT\nview-distance=4\n"
-        "tick-distance=4\nenable-lan-visibility=true\nemit-server-telemetry=false\ntransport=nethernet\n")
+        "tick-distance=4\nenable-lan-visibility=true\nemit-server-telemetry=false\n"
+        f"transport={'nethernet' if args.client_transport == 'lan' else 'raknet'}\n")
     (server / "endstone.toml").write_text("[settings]\n")
     with ZipFile(args.wheel) as wheel:
         for info in wheel.infolist():
@@ -172,7 +175,7 @@ def main():
 
     try:
         wait(lambda: any("Server started" in line for line in lines), "server start", 120)
-        client = subprocess.Popen([str(args.client.resolve()), "-transport", "lan", "-address", "127.0.0.1:39431",
+        client = subprocess.Popen([str(args.client.resolve()), "-transport", args.client_transport, "-address", args.client_address,
                                    "-names", "InventoryTest", "-duration", "240s"],
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   text=True, encoding="utf-8", errors="replace",

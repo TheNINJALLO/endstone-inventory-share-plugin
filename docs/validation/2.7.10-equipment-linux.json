@@ -1,0 +1,14 @@
+{
+  "platform": "linux",
+  "python": "3.13.16",
+  "wheel_sha256": "46f397137045e4173c3c5472abe62f64131f4b18c84075e1218953c39fa63d72",
+  "checks": [
+    "baseline: totem and all four armor slots equip/unequip with native IDs",
+    "identical restore: full inventory, totem, shield, four armor slots, names and lore preserved",
+    "occupied equipment survives restore and remains movable",
+    "different local inventory replaced, native client updates allow all equipment actions",
+    "empty snapshot clears every slot and subsequent equipment works"
+  ],
+  "server_exit": 0,
+  "passed": true
+}

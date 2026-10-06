@@ -1,0 +1,2 @@
+46f397137045e4173c3c5472abe62f64131f4b18c84075e1218953c39fa63d72  endstone_inventory_share_plugin-2.7.10-cp310-abi3-linux_x86_64.whl
+6022d1d9a6447f9166cfc42c7e434f82a3653bf0ab83381dab89233985000a0f  endstone_inventory_share_plugin-2.7.10-cp310-abi3-win_amd64.whl
