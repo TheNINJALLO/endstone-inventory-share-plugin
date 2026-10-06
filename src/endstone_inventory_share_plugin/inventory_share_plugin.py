@@ -7,14 +7,14 @@ from pathlib import Path
 from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
 
-from endstone.level import Location
+from endstone import level
 from endstone.command import ConsoleCommandSender
 from endstone.event import (
     event_handler, EventPriority, PlayerLoginEvent, PlayerJoinEvent,
     PlayerQuitEvent, PlayerCommandEvent, ServerCommandEvent, ScriptMessageEvent,
     PacketReceiveEvent, PlayerPickupItemEvent, ActorDamageEvent,
 )
-from endstone.inventory import ItemStack
+from endstone import inventory
 from endstone.plugin import Plugin
 from endstone.scoreboard import Criteria
 
@@ -29,6 +29,10 @@ from endstone.nbt import (
     CompoundTag, ListTag, ByteTag, ShortTag, IntTag, LongTag,
     FloatTag, DoubleTag, StringTag, ByteArrayTag, IntArrayTag,
 )
+
+# Use native exports even when the Python facade packages are unavailable.
+Location = level.Location
+ItemStack = inventory.ItemStack
 
 
 # ---------------------------------------------------------------------------
@@ -753,7 +757,7 @@ class InventorySharePlugin(Plugin):
             self, self._autosave, delay=self.autosave_seconds * 20,
             period=self.autosave_seconds * 20,
         )
-        self.logger.info(f"InventorySharePlugin v2.7.8 enabled; autosave every {self.autosave_seconds}s")
+        self.logger.info(f"InventorySharePlugin v2.7.9 enabled; autosave every {self.autosave_seconds}s")
         for player in self.server.online_players:
             # Hot enabling must use the same claim/restore path as a fresh join.
             self._begin_join(player)

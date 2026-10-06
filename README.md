@@ -1,15 +1,16 @@
 <p align="center"><img src="docs/assets/banner.svg" width="100%" alt="Endstone Inventory Share"></p>
 
-# Inventory Share v2.7.8
+# Inventory Share v2.7.9
 
 Share inventories, armor, offhand, ender chests, XP, Money scores, tags, and per-server locations through MySQL/MariaDB. Item NBT and unresolved custom items are preserved in JSON storage.
 
-**v2.7.8 fixes rejected offhand and armor moves after a shared inventory restore.** The old clear/reinsert sequence could leave the client holding stale native stack IDs. Restore now assigns final slots directly and asks Bedrock to publish its native inventory state. Players do not need to empty their inventory or die. The bundled C++ helper requires the qualified **BDS 1.26.51.1 x86-64** binary and **Endstone 0.11.11 or 0.11.12**; install the wheel for your server OS. Automatic legacy-lock recovery and shutdown protection remain enabled.
+**v2.7.9 fixes plugin loading when the `endstone.level` or `endstone.inventory` Python facade is unavailable.** It resolves `Location` and `ItemStack` through Endstone's native exports. The inventory synchronization and recovery behavior from v2.7.8 is retained. The bundled C++ helper still requires the qualified **BDS 1.26.51.1 x86-64** binary and **Endstone 0.11.11 or 0.11.12**; install the wheel for your server OS.
 
-[Download](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.8) · [Recovery guide](docs/recovery.md) · [Validation](docs/validation-2.7.8.md) · [Changelog](CHANGELOG.md) · [日本語](README_JP.md)
+[Download](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.9) · [Recovery guide](docs/recovery.md) · [Validation](docs/validation-2.7.8.md) · [Changelog](CHANGELOG.md) · [日本語](README_JP.md)
 
 ## What changed
 
+- Load without the `endstone.level` and `endstone.inventory` Python facade packages.
 - Restore inventory and equipment without clearing and recreating unchanged stacks.
 - Send native inventory contents after restore so changed items receive the correct client stack IDs.
 - Preserve unresolved/out-of-range custom items in the vault and propagate slot-write failures to the join guard.
@@ -31,13 +32,13 @@ Share inventories, armor, offhand, ender chests, XP, Money scores, tags, and per
 ## Install or upgrade
 
 1. Back up the shared database, worlds, and Inventory Share's plugin data directories.
-2. Stop **all servers sharing the database** before upgrading. Replace the old wheel on every server with the matching v2.7.8 platform wheel; do not mix older writers with this version.
+2. Stop **all servers sharing the database** before upgrading. Replace the old wheel on every server with the matching v2.7.9 platform wheel; do not mix older writers with this version.
 3. Keep each server's existing plugin data directory and configuration. Start one server in maintenance mode to run the additive schema migration, then check the console for errors. Migration adds `session_token` and normalizes the old text login flag without deleting inventories.
 4. Legacy flags left after an old reboot recover automatically when each affected player joins. No per-player command or configuration change is needed. The old flag cannot identify a live pre-token server, so those old servers must stay stopped until upgraded.
 5. Start the other servers, allow players to reconnect, and use the console's `stop` command for planned restarts.
 
 ```sh
-gh release download v2.7.8 --repo TheNINJALLO/endstone-inventory-share-plugin --pattern "*linux_x86_64.whl"
+gh release download v2.7.9 --repo TheNINJALLO/endstone-inventory-share-plugin --pattern "*linux_x86_64.whl"
 ```
 
 For Windows, use `--pattern "*win_amd64.whl"` instead. Install only one Inventory Share wheel. An unsupported runtime logs `Inventory Share is not ready` and blocks logins before restoring inventories; update the runtime to the supported build instead of bypassing the check. After restarting, affected players can reconnect normally.
@@ -66,7 +67,7 @@ join_wait_seconds = 15
 
 | Code | Meaning / action |
 |---|---|
-| `INV-LEGACY` (older releases) | Upgrade all sharing servers to v2.7.8. The next join automatically recovers this tokenless flag; v2.7.8 no longer emits this error. |
+| `INV-LEGACY` (older releases) | Upgrade all sharing servers to v2.7.9. The next join automatically recovers this tokenless flag; v2.7.9 no longer emits this error. |
 | `INV-BUSY` | The previous server still owns the inventory after the retry window. Check that server's pending saves and connectivity; do not forcibly clear its lock. |
 | `INV-DB` | Database access failed. The console records the actual MySQL error. |
 | `INV-DATA` | The inventory/vault could not be restored. The console now includes the underlying exception; keep the stored data for repair. |

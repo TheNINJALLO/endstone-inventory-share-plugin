@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.7.9 - 2026-10-06
+
+- Resolve Location and ItemStack from Endstone native exports when Python facade packages are missing.
+- Add full entry-point import regression tests with each missing facade and both missing together.
+- Preserve native inventory synchronization, database recovery, and the existing qualified runtime checks.
+
 ## 2.7.8 - 2026-09-27
 
 - Fix native stack-ID desynchronization after restore that rejects offhand and armor equipment requests.
