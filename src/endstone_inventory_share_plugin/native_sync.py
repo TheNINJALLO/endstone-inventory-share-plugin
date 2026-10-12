@@ -36,8 +36,8 @@ def ensure_native():
         return _library
     if sys.platform not in PROFILES or platform.machine().lower() not in {"amd64", "x86_64"}:
         raise RuntimeError("Inventory Share requires Windows/Linux x86-64 BDS 1.26.52.3")
-    if version("endstone") not in {"0.11.13"}:
-        raise RuntimeError("Inventory refresh requires Endstone 0.11.13 with BDS 1.26.52.3")
+    if version("endstone") not in {"0.11.14"}:
+        raise RuntimeError("Inventory refresh requires Endstone 0.11.14 with BDS 1.26.52.3")
     filename, expected = PROFILES[sys.platform]
     digest = hashlib.sha256()
     with _executable().open("rb") as executable:

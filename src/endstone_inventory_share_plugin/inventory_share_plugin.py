@@ -757,7 +757,7 @@ class InventorySharePlugin(Plugin):
             self, self._autosave, delay=self.autosave_seconds * 20,
             period=self.autosave_seconds * 20,
         )
-        self.logger.info(f"InventorySharePlugin v2.7.10 enabled; autosave every {self.autosave_seconds}s")
+        self.logger.info(f"InventorySharePlugin v2.7.11 enabled; autosave every {self.autosave_seconds}s")
         for player in self.server.online_players:
             # Hot enabling must use the same claim/restore path as a fresh join.
             self._begin_join(player)

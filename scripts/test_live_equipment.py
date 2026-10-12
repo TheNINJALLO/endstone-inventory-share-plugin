@@ -36,9 +36,7 @@ def main():
         target = server / entry.name
         if entry.is_dir():
             if os.name == "nt":
-                subprocess.run(["powershell", "-NoProfile", "-Command",
-                                "New-Item -ItemType Junction -Path $env:TEST_LINK -Target $env:TEST_TARGET | Out-Null"],
-                               env=dict(os.environ, TEST_LINK=str(target), TEST_TARGET=str(entry)), check=True)
+                shutil.copytree(entry, target)
             else:
                 target.symlink_to(entry, target_is_directory=True)
         else:
@@ -190,7 +188,8 @@ def main():
                     except json.JSONDecodeError:
                         pass
         threading.Thread(target=read_client, daemon=True).start()
-        wait(lambda: "items" in snapshot() and abs(snapshot()["location"][1]) < 320, "in-world spawn")
+        wait(lambda: (state := snapshot()) and "items" in state and "location" in state
+             and abs(state["location"][1]) < 320, "in-world spawn")
         send("inventory_open", count=6)
         wait(lambda: any(e.get("event") == "container_open" for e in events), "native inventory screen")
         control("seed")
