@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.29)
-project(inventory_sync VERSION 0.11.14 LANGUAGES CXX)
+project(inventory_sync VERSION 0.11.15 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(FetchContent)
-# Endstone v0.11.14, BDS 1.26.52.3. Compile against the exact runtime SDK.
+# Endstone v0.11.15, BDS 1.26.60.6. Compile against the exact runtime SDK.
 FetchContent_Declare(endstone
     GIT_REPOSITORY https://github.com/EndstoneMC/endstone.git
-    GIT_TAG 03f4189b1535af0870861748fc569f6deac0ad65
+    GIT_TAG b4aaa87d2c5305e7d340168f824ac2e2ea722e44
     SOURCE_SUBDIR inventory-sync-no-subproject)
 FetchContent_MakeAvailable(endstone)
 find_package(Python3 COMPONENTS Interpreter Development.SABIModule REQUIRED)
@@ -28,8 +28,10 @@ string(REPLACE "std::format(\"{}\", error_info.error)" "error_info.error.message
 if(NOT result_text MATCHES "Inventory Share standalone formatting compatibility")
     string(PREPEND result_text "// Inventory Share standalone formatting compatibility: two format expressions changed.\n")
 endif()
-file(WRITE "${result_header}" "${result_text}")
-set(ENDSTONE_VERSION_FULL "0.11.14")
+# Keep the pinned SDK checkout untouched, including when supplied read-only.
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/bedrock/platform")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/include/bedrock/platform/result.h" "${result_text}")
+set(ENDSTONE_VERSION_FULL "0.11.15")
 configure_file("${endstone_SOURCE_DIR}/include/endstone/version.h.in" "include/endstone/version.h" @ONLY)
 
 add_library(inventory_sync SHARED refresh.cpp
@@ -37,7 +39,7 @@ add_library(inventory_sync SHARED refresh.cpp
     "${endstone_SOURCE_DIR}/src/bedrock/core/sem_ver/sem_version.cpp"
     "${endstone_SOURCE_DIR}/src/bedrock/resources/base_game_version.cpp")
 target_include_directories(inventory_sync PRIVATE
-    "${endstone_SOURCE_DIR}/include" "${endstone_SOURCE_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}/include")
+    "${CMAKE_CURRENT_BINARY_DIR}/include" "${endstone_SOURCE_DIR}/include" "${endstone_SOURCE_DIR}/src")
 target_link_libraries(inventory_sync PRIVATE Python3::SABIModule Boost::headers EnTT::EnTT
     nonstd::expected-lite glm::glm Microsoft.GSL::GSL raknet::raknet pybind11::headers)
 target_compile_definitions(inventory_sync PRIVATE ENTT_NO_MIXIN=1 ENTT_SPARSE_PAGE=2048 ENTT_PACKED_PAGE=128)

@@ -13,7 +13,7 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setattr(native_sync, "_library", None)
     monkeypatch.setattr(native_sync.sys, "platform", "linux")
     monkeypatch.setattr(native_sync.platform, "machine", lambda: "x86_64")
-    monkeypatch.setattr(native_sync, "version", lambda name: "0.11.14")
+    monkeypatch.setattr(native_sync, "version", lambda name: "0.11.15")
     monkeypatch.setattr(native_sync, "_executable", lambda: binary)
     loader = Mock()
     loader.return_value.invshare_refresh.return_value = 1
@@ -28,7 +28,7 @@ def test_unknown_server_binary_never_loads_native_code(runtime):
     loader.assert_not_called()
 
 
-@pytest.mark.parametrize("unsupported", ["0.11.11", "0.11.12", "0.11.13", "0.11.15", "0.12.0"])
+@pytest.mark.parametrize("unsupported", ["0.11.11", "0.11.12", "0.11.13", "0.11.14", "0.11.16", "0.12.0"])
 def test_unknown_endstone_version_never_loads_native_code(runtime, monkeypatch, unsupported):
     _, loader = runtime
     monkeypatch.setattr(native_sync, "version", lambda name: unsupported)
