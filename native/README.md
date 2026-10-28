@@ -1,6 +1,6 @@
 # Native inventory synchronization
 
-The bridge calls `Mob::sendInventory(false)` through Endstone's native player inventory wrapper. It uses pinned Endstone v0.11.14 headers and pybind11's checked conduit to obtain the C++ inventory pointer. There are no hand-written object offsets, function addresses, synthetic stack IDs, or client transaction overrides. This release targets Endstone 0.11.14 and BDS 1.26.52.3.
+The bridge calls `Mob::sendInventory(false)` through Endstone's native player inventory wrapper. It uses pinned Endstone v0.11.15 headers and pybind11's checked conduit to obtain the C++ inventory pointer. There are no hand-written object offsets, function addresses, synthetic stack IDs, or client transaction overrides. This release targets Endstone 0.11.15 and BDS 1.26.60.6.
 
 The bridge uses the CPython 3.11 stable API (`Py_LIMITED_API=0x030A0000`) and runs on the server thread with the GIL retained. Python verifies the BDS executable SHA-256 and Endstone version before loading it. Unknown builds remain blocked before shared data is applied.
 
@@ -16,6 +16,6 @@ python scripts/build_native.py --output scratch/native
 
 Set `INVSHARE_NATIVE_LIBRARY` to `scratch/native/inventory_sync.so` (Linux) or `scratch/native/inventory_sync.dll` (Windows), then run `python -m build --wheel`. The build refuses to package a wheel without the helper. Linux release builds use Ubuntu 22.04 and static libc++; glibc 2.35+ is required. No BDS server files are included in the wheel.
 
-`CMakeLists.txt` fetches Endstone commit `03f4189b1535af0870861748fc569f6deac0ad65`. Two unsupported formatting expressions in the SDK's `result.h` are replaced for compilation; layouts and inventory behavior are unchanged. `--sdk` may use an already checked-out copy of that same commit. Dependency versions and the RakNet recipe revision are pinned in `conanfile.py`.
+`CMakeLists.txt` fetches Endstone commit `b4aaa87d2c5305e7d340168f824ac2e2ea722e44`. Two unsupported formatting expressions in `result.h` are replaced in a generated build-directory copy; the SDK checkout remains untouched, and layouts and inventory behavior are unchanged. `--sdk` may use an already checked-out copy of that same commit. Dependency versions and the RakNet recipe revision are pinned in `conanfile.py`.
 
 Bundled notices and licenses are in `src/endstone_inventory_share_plugin/_native/`. Before adding a new runtime profile, qualify the actual platform wheel with both live fixtures and update the validation record.

@@ -33,7 +33,12 @@ def main():
     parser.add_argument("--db-host", default="127.0.0.1")
     parser.add_argument("--database", default="invshare_live")
     parser.add_argument("--join-cases", action="store_true", help="Also test handoff, DB retries, local recovery, legacy locks/tags")
+    parser.add_argument("--extra-plugin", type=Path, action="append", default=[],
+                        help="Install an additional wheel in the disposable server for coexistence checks")
     args = parser.parse_args()
+    for wheel in args.extra_plugin:
+        if not wheel.is_file() or wheel.suffix != ".whl":
+            parser.error("Each extra plugin must be an existing wheel")
     if not args.database.startswith("invshare_live") or not args.database.replace("_", "").isalnum():
         parser.error("Use an invshare_live fixture database name")
     server, output = args.server.resolve(), args.output.resolve()
@@ -71,7 +76,8 @@ def main():
     (dist / "entry_points.txt").write_text("[endstone]\ninvshare-probe = probe_plugin:Probe\n")
     (probe / "sitecustomize.py").write_text(
         'import os,sys\nsys.path[:]=[p for p in sys.path if "site-packages" not in p.lower() '
-        'or p.lower().startswith(os.environ["INVSHARE_PROBE_PREFIX"].lower())]\n')
+        'or p.lower().startswith((os.environ["INVSHARE_PROBE_PREFIX"].lower(), '
+        'os.environ["INVSHARE_PLUGIN_PREFIX"].lower()))]\n')
     # The client's explicit discovery filter requires these fixture labels.
     (server / "server.properties").write_text(
         "server-name=Paradox acceptance test\nlevel-name=paradox-acceptance\n"
@@ -82,6 +88,8 @@ def main():
         f"transport={'nethernet' if args.client_transport == 'lan' else 'raknet'}\n")
     (server / "endstone.toml").write_text("[settings]\n")
     (server / "plugins").mkdir(exist_ok=True)
+    for wheel in args.extra_plugin:
+        shutil.copy2(wheel, server / "plugins" / wheel.name)
     if os.name == "nt":
         from endstone.cli.windows import WindowsBootstrap as Bootstrap, PopenWithDll
         process_class = PopenWithDll
@@ -99,6 +107,7 @@ def main():
         env = boot._endstone_runtime_env.copy()
         env.update(PYTHONPATH=str(probe) + os.pathsep + env["PYTHONPATH"],
                    INVSHARE_PROBE_PREFIX=sys.prefix, PYTHONNOUSERSITE="1",
+                   INVSHARE_PLUGIN_PREFIX=str(server / "plugins"),
                    INVSHARE_LIVE_DB_PORT=str(args.db_port), INVSHARE_LIVE_DB_HOST=args.db_host,
                    INVSHARE_LIVE_OUTPUT=str(phase_output),
                    INVSHARE_LIVE_PHASE=phase, INVSHARE_LIVE_DATABASE=args.database)

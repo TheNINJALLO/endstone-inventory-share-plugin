@@ -1,10 +1,11 @@
 Inventory Share native inventory synchronization bridge
 
-Built using Endstone v0.11.12 (commit 1c71186cba896c5e0bc432384a8a8e72dfb2a626).
+Built using Endstone v0.11.15 (commit b4aaa87d2c5305e7d340168f824ac2e2ea722e44).
 Copyright (c) 2023, The Endstone Project. Apache License 2.0.
 https://github.com/EndstoneMC/endstone
-The build substitutes two formatting expressions in bedrock/platform/result.h
-for standalone compiler compatibility. No inventory method or ABI layout is changed.
+The build substitutes two formatting expressions in a generated copy of
+bedrock/platform/result.h for standalone compiler compatibility. No inventory
+method or ABI layout is changed; the pinned SDK checkout is left untouched.
 
 Build/header dependencies: Boost 1.91.0, EnTT 3.16.0, expected-lite 0.9.0,
 GLM 1.0.3, Microsoft GSL 4.2.2, Endstone RakNet 4.081-mojang (r26u3),

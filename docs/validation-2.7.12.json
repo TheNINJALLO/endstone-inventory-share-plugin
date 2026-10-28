@@ -1,0 +1,37 @@
+{
+  "version": "2.7.12",
+  "date": "2026-10-28",
+  "endstone": "0.11.15",
+  "sdk_commit": "b4aaa87d2c5305e7d340168f824ac2e2ea722e44",
+  "bds": "1.26.60.6",
+  "protocol": 2225,
+  "native_build_commit": "bd76607744142ca6c2a9b967f2b1642a485fcc38",
+  "ci_run": "https://github.com/TheNINJALLO/endstone-inventory-share-plugin/actions/runs/40750141556",
+  "ci_tests_per_python": 79,
+  "ci_python_versions": [
+    "3.11",
+    "3.13",
+    "3.14"
+  ],
+  "packaging": "CI native libraries retained byte-for-byte; SDK provenance notice corrected before final wheel qualification",
+  "platforms": {
+    "linux": {
+      "wheel": "endstone_inventory_share_plugin-2.7.12-cp310-abi3-linux_x86_64.whl",
+      "wheel_sha256": "f5ddc357a70e4dee69c0d377a201532598374d4dbb90d9c45806f783fa28f710",
+      "native_sha256": "343a5671785184e9372b2f48751cb7a70d582641768b4efbdd48936155e18156",
+      "equipment_checks_passed": 5,
+      "lifecycle_phases_passed": 10,
+      "python": "3.14.10",
+      "equipment_clean_exit": 0
+    },
+    "windows": {
+      "wheel": "endstone_inventory_share_plugin-2.7.12-cp310-abi3-win_amd64.whl",
+      "wheel_sha256": "dde04bb6ea13f1fa7f12dc7b6ecb2345bdf34dc84f583edeae9e90f9d4367410",
+      "native_sha256": "51ab8df83e200d5b17ba57497919b575d0eed9b6cb9d54ee9e6d10dff0db4555",
+      "equipment_checks_passed": 5,
+      "lifecycle_phases_passed": 10,
+      "python": "3.11.9",
+      "equipment_clean_exit": 0
+    }
+  }
+}

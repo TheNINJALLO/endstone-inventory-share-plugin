@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.7.12 - 2026-10-28
+
+- Support Endstone 0.11.15 with BDS 1.26.60.6 / protocol 2225. Rebuild the native inventory synchronization helper against SDK commit `b4aaa87d2c5305e7d340168f824ac2e2ea722e44` and retain exact runtime/fingerprint checks.
+- Fix the startup rejection that leaves all logins blocked after upgrading to the runtime required by BlockData 0.6.9. Preserve the shared schema, inventory format, session fencing, recovery journal, and failed-restore protections.
+- Keep standalone SDK formatting substitutions in a generated header rather than modifying the pinned checkout; refresh the bundled native provenance notice.
+- Update the scripted equipment/recovery client for protocol 2225 and test that previous and unknown Endstone versions remain blocked before native code loads.
+- Validate the final Linux/Windows wheels with five live equipment checks and ten shutdown/crash/recovery phases per platform. CI passes 79 lifecycle/MariaDB tests on Python 3.11, 3.13, and 3.14; make equipment reports atomic after a reproduced Windows fixture read race.
+
 ## 2.7.10 - 2026-10-06
 
 - Support Endstone 0.11.13 with BDS 1.26.52.3 on Linux and Windows x86-64.

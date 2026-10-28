@@ -75,7 +75,14 @@ class Probe(Plugin):
             contents, _ = save_inventory_to_json(inv, inv.size)
             result = {"id": self.last, "items": json.loads(contents),
                       "location": [player.location.x, player.location.y, player.location.z]}
-            (self.root / "snapshot.json").write_text(json.dumps(result))
+            report = self.root / "snapshot.tmp"
+            report.write_text(json.dumps(result))
+            try:
+                report.replace(self.root / "snapshot.json")
+            except PermissionError:
+                # A Windows reader can briefly hold the old report open.
+                # Publish the complete result again on the following tick.
+                pass
         except (FileNotFoundError, json.JSONDecodeError):
             return  # The test driver may be replacing its small control file.
         except Exception:

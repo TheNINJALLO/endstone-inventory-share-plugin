@@ -1,18 +1,19 @@
 <p align="center"><img src="docs/assets/banner.svg" width="100%" alt="Endstone Inventory Share"></p>
 
-> Endstone 0.11.14 release 2.7.11: This release includes verified Linux and Windows wheels. The recorded validation defines the tested scope.
+> Endstone 0.11.15 release 2.7.12: This release includes verified Linux and Windows wheels. The recorded validation defines the tested scope.
 
-# Inventory Share v2.7.11
+# Inventory Share v2.7.12
 
 Share inventories, armor, offhand, ender chests, XP, Money scores, tags, and per-server locations through MySQL/MariaDB. Item NBT and unresolved custom items are preserved in JSON storage.
 
-**v2.7.11 supports Endstone 0.11.14 and BDS 1.26.52.3.** The C++ inventory synchronization helper is rebuilt against the pinned 0.11.14 SDK, and runtime checks require the matching Endstone version and BDS executable hash. The missing Python facade import fixes, equipment synchronization, automatic legacy-lock recovery, and shutdown/crash protections are retained. Install the wheel for your server OS.
+**v2.7.12 supports Endstone 0.11.15 and BDS 1.26.60.6.** The C++ inventory synchronization helper is rebuilt against the pinned 0.11.15 SDK, and runtime checks require the matching Endstone version and BDS executable hash. The missing Python facade import fixes, equipment synchronization, automatic legacy-lock recovery, and shutdown/crash protections are retained. Install the wheel for your server OS.
 
-[Download](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.11) · [Recovery guide](docs/recovery.md) · [Validation](docs/validation-2.7.11.md) · [Changelog](CHANGELOG.md) · [日本語](README_JP.md)
+[Download](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.12) · [Recovery guide](docs/recovery.md) · [Validation](docs/validation-2.7.12.md) · [Changelog](CHANGELOG.md) · [日本語](README_JP.md)
 
 ## What changed
 
-- Support Endstone 0.11.14 and the qualified BDS 1.26.52.3 server binaries.
+- Fix the native-runtime startup rejection that blocks every login after upgrading the server to the Endstone/BDS versions required by BlockData 0.6.9.
+- Support Endstone 0.11.15 and the qualified BDS 1.26.60.6 server binaries.
 - Load without the `endstone.level` and `endstone.inventory` Python facade packages.
 - Restore inventory and equipment without clearing and recreating unchanged stacks.
 - Send native inventory contents after restore so changed items receive the correct client stack IDs.
@@ -35,16 +36,18 @@ Share inventories, armor, offhand, ender chests, XP, Money scores, tags, and per
 ## Install or upgrade
 
 1. Back up the shared database, worlds, and Inventory Share's plugin data directories.
-2. Stop **all servers sharing the database** before upgrading. Replace the old wheel on every server with the matching v2.7.11 platform wheel; do not mix older writers with this version.
+2. Stop the servers moving to Endstone 0.11.15 / BDS 1.26.60.6 and replace their old wheel with the matching v2.7.12 platform wheel. Keep each other server's plugin matched to its own runtime. If upgrading a pre-session-token writer, stop all sharing servers and upgrade them together.
 3. Keep each server's existing plugin data directory and configuration. Start one server in maintenance mode to run the additive schema migration, then check the console for errors. Migration adds `session_token` and normalizes the old text login flag without deleting inventories.
 4. Legacy flags left after an old reboot recover automatically when each affected player joins. No per-player command or configuration change is needed. The old flag cannot identify a live pre-token server, so those old servers must stay stopped until upgraded.
 5. Start the other servers, allow players to reconnect, and use the console's `stop` command for planned restarts.
 
 ```sh
-gh release download v2.7.11 --repo TheNINJALLO/endstone-inventory-share-plugin --pattern "*linux_x86_64.whl"
+gh release download v2.7.12 --repo TheNINJALLO/endstone-inventory-share-plugin --pattern "*linux_x86_64.whl"
 ```
 
 For Windows, use `--pattern "*win_amd64.whl"` instead. Install only one Inventory Share wheel. An unsupported runtime logs `Inventory Share is not ready` and blocks logins before restoring inventories; update the runtime to the supported build instead of bypassing the check. After restarting, affected players can reconnect normally.
+
+Upgrading from 2.7.11 does not change the shared database schema, serialized inventory format, session tokens, configuration, or pending-save journal. Preserve the existing data folders.
 
 For a new installation, place the wheel in `plugins/`, start once to create the configuration, enter your database settings, then restart. The plugin creates/migrates its schema; `create_db.sql` is also supplied for initial setup. Use an InnoDB table. The schema migration account needs CREATE/ALTER privileges as well as SELECT/INSERT/UPDATE.
 
@@ -70,7 +73,7 @@ join_wait_seconds = 15
 
 | Code | Meaning / action |
 |---|---|
-| `INV-LEGACY` (older releases) | Upgrade all sharing servers to v2.7.11. The next join automatically recovers this tokenless flag; v2.7.11 no longer emits this error. |
+| `INV-LEGACY` (older releases) | Upgrade all sharing servers to v2.7.12. The next join automatically recovers this tokenless flag; v2.7.12 no longer emits this error. |
 | `INV-BUSY` | The previous server still owns the inventory after the retry window. Check that server's pending saves and connectivity; do not forcibly clear its lock. |
 | `INV-DB` | Database access failed. The console records the actual MySQL error. |
 | `INV-DATA` | The inventory/vault could not be restored. The console now includes the underlying exception; keep the stored data for repair. |
@@ -100,8 +103,8 @@ This update cannot reconstruct items already overwritten by an older release. Re
 
 | Component | Requirement / validation |
 |---|---|
-| Endstone | `0.11.14`, API `0.11` |
-| BDS | Exactly `1.26.52.3` x86-64, Windows or Linux; executable SHA-256 checked at startup |
+| Endstone | `0.11.15`, API `0.11` |
+| BDS | Exactly `1.26.60.6` x86-64, Windows or Linux; executable SHA-256 checked at startup |
 | Python | CPython `>=3.10`; stable-ABI native wheel; live tested on Windows 3.11 and Linux 3.13/3.14 |
 | Linux OS | glibc 2.35 or newer (Ubuntu 22.04 build); Alpine/musl is unsupported |
 | Database | MySQL/MariaDB with InnoDB; tests use MariaDB `11.4` |
@@ -111,7 +114,7 @@ The optional bundle companion remains version/API dependent. Its Script API fall
 
 ## Development and releases
 
-Install the test dependencies directly (`endstone`, `PyMySQL`, `pycryptodome`, `pytest`, `ruff`), then run `python -m pytest`. Building a wheel requires the native helper: see [native build instructions](native/README.md). Set `INVSHARE_TEST_PORT` (and optionally `INVSHARE_TEST_HOST`, `INVSHARE_TEST_USER`, `INVSHARE_TEST_PASSWORD`) to a disposable MariaDB instance to run the integration tests. **These tests reset the `invshare_test.player_data` table.** See [validation](docs/validation-2.7.11.md) for the real-server runner.
+Install the test dependencies directly (`endstone`, `PyMySQL`, `pycryptodome`, `pytest`, `ruff`), then run `python -m pytest`. Building a wheel requires the native helper: see [native build instructions](native/README.md). Set `INVSHARE_TEST_PORT` (and optionally `INVSHARE_TEST_HOST`, `INVSHARE_TEST_USER`, `INVSHARE_TEST_PASSWORD`) to a disposable MariaDB instance to run the integration tests. **These tests reset the `invshare_test.player_data` table.** See [validation](docs/validation-2.7.12.md) for the real-server runner.
 
 GitHub Actions runs the automated and database tests on Python 3.11, 3.13, and 3.14 and builds separate Linux/Windows native wheels. Tagged releases upload wheels to a draft after those jobs pass; publish the draft after the actual release wheels pass the live equipment and recovery fixtures. Live BDS equipment and recovery qualification is recorded separately in the validation guide. The repository's `docs/` directory contains the maintained operational guides; this repository does not have a separate enabled GitHub wiki.
 
