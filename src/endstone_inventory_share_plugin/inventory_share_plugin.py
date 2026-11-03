@@ -21,6 +21,7 @@ from endstone.scoreboard import Criteria
 from .persistence import (
     InventoryStore, SnapshotJournal, SessionBusy, StaleSession,
     recover_pending, retryable_load_error,
+    require_complete_storage,
 )
 from .native_sync import ensure_native, refresh_inventory
 
@@ -70,28 +71,30 @@ def nbt_to_dict(tag):
     elif isinstance(tag, IntArrayTag):
         return {"_type": "int_array", "value": list(tag)}
     else:
-        return {"_type": "unknown", "value": str(tag)}
+        raise ValueError(f"Unsupported NBT tag: {type(tag).__name__}")
 
 
 def dict_to_nbt(data):
     """Recursively rebuild an NBT Tag from a dict produced by nbt_to_dict."""
     if not isinstance(data, dict):
-        return StringTag(str(data))
+        raise ValueError("Invalid saved NBT tag")
 
     t = data.get("_type", "unknown")
     v = data.get("value")
 
     if t == "compound":
         tag = CompoundTag()
-        if isinstance(v, dict):
-            for key, child in v.items():
-                tag[str(key)] = dict_to_nbt(child)
+        if not isinstance(v, dict):
+            raise ValueError("Invalid saved NBT compound")
+        for key, child in v.items():
+            tag[str(key)] = dict_to_nbt(child)
         return tag
     elif t == "list":
         list_tag = ListTag()
-        if isinstance(v, list):
-            for child in v:
-                list_tag.append(dict_to_nbt(child))
+        if not isinstance(v, list):
+            raise ValueError("Invalid saved NBT list")
+        for child in v:
+            list_tag.append(dict_to_nbt(child))
         return list_tag
     elif t == "byte":
         return ByteTag(int(v))
@@ -112,7 +115,7 @@ def dict_to_nbt(data):
     elif t == "int_array":
         return IntArrayTag(v if isinstance(v, list) else [])
     else:
-        return StringTag(str(v if v is not None else data))
+        raise ValueError(f"Unsupported saved NBT type: {t}")
 
 
 def sanitize_for_json(obj):
@@ -178,8 +181,11 @@ def deserialize_item(item_data, logger=None, context=""):
     if nbt_data is not None:
         try:
             tag = dict_to_nbt(nbt_data)
-            if isinstance(tag, CompoundTag):
-                item.nbt = tag
+            if not isinstance(tag, CompoundTag):
+                raise ValueError("Item NBT must be a compound")
+            item.nbt = tag
+            if nbt_to_dict(item.nbt) != nbt_data:
+                raise ValueError("Native NBT round trip changed item metadata")
         except Exception as nbt_err:
             if logger:
                 logger.warning(
@@ -359,6 +365,7 @@ _REQUIRED_COLUMNS = [
 
 class InventorySharePlugin(Plugin):
     api_version = "0.11"
+    soft_depend = ['inventoryui', 'ninjos_backpacks']
     commands = {
         "invshare": {
             "description": "Console-only recovery of a legacy inventory login lock",
@@ -502,7 +509,19 @@ class InventorySharePlugin(Plugin):
             "enderchest": ec_still_vaulted,
         }
 
-        bundle_data = self._bundle_cache.get(name)
+        # Native typed NBT is the authoritative item snapshot. Retain historical
+        # companion records in SQL for manual recovery; a delayed/stale addon
+        # message must not replace them or restore a second copy of a bundle.
+        bundle_data = None
+
+        storage_barriers = []
+        manager = getattr(self.server, 'plugin_manager', None)
+        backpacks = manager.get_plugin('ninjos_backpacks') if manager is not None else None
+        if backpacks is not None and hasattr(backpacks, 'db') and hasattr(backpacks.db, 'recovery'):
+            pending_ids = [storage_id for storage_id, payload in backpacks.db.recovery.entries()
+                           if payload.get('owner_name') == name or payload.get('owner_uuid') == str(player.unique_id)]
+            if pending_ids:
+                storage_barriers.append({'journal': str(backpacks.db.recovery.path.resolve()), 'storage_ids': pending_ids})
 
         return {
             "xuid": xuid,
@@ -517,11 +536,13 @@ class InventorySharePlugin(Plugin):
             "vaulted_count": len(inv_still_vaulted) + len(ec_still_vaulted),
             "current_location": current_location,
             "bundle_data": bundle_data,
+            "storage_barriers": storage_barriers,
             "preserve_fields": sorted(preserved),
         }
 
     def _persist_snapshot(self, xuid, token, data, release=False):
         try:
+            require_complete_storage(data)
             self.store.save(xuid, token, data, release=release)
             if release:
                 self.journal.remove(token)
@@ -555,6 +576,12 @@ class InventorySharePlugin(Plugin):
             except Exception as error:
                 self.logger.error(f"Final inventory capture failed for {player.name}: {error}; "
                                   "preserving the last complete snapshot.")
+                data = next((data for saved_token, _, data in self.journal.entries()
+                             if saved_token == token), None)
+                blocked = dict(data or {})
+                blocked['capture_failed'] = True
+                self.journal.put(token, player.xuid, blocked)
+                return  # Keep ownership; never release a stale snapshot as current.
         # A player who never finished restoring must not overwrite the database
         # with the local world's empty/partial inventory.
         data = next((data for saved_token, _, data in self.journal.entries()
@@ -757,7 +784,7 @@ class InventorySharePlugin(Plugin):
             self, self._autosave, delay=self.autosave_seconds * 20,
             period=self.autosave_seconds * 20,
         )
-        self.logger.info(f"InventorySharePlugin v2.7.12 enabled; autosave every {self.autosave_seconds}s")
+        self.logger.info(f"InventorySharePlugin v2.7.13 enabled; autosave every {self.autosave_seconds}s")
         for player in self.server.online_players:
             # Hot enabling must use the same claim/restore path as a fresh join.
             self._begin_join(player)
@@ -1025,25 +1052,10 @@ class InventorySharePlugin(Plugin):
                             )
 
                         if bundles_json:
-                            try:
-                                bundle_payload = json.loads(bundles_json)
-                                if bundle_payload.get("bundles"):
-                                    bundle_payload["playerName"] = p.name
-                                    restore_cmd = (
-                                        f'scriptevent invshare:bundle_load '
-                                        f'{json.dumps(bundle_payload, ensure_ascii=False)}'
-                                    )
-                                    self.server.dispatch_command(
-                                        self.server.command_sender, restore_cmd
-                                    )
-                                    self.logger.info(
-                                        f"[Bundle Sync] Dispatched {len(bundle_payload['bundles'])} "
-                                        f"bundle(s) for restore to {p.name}"
-                                    )
-                            except Exception as bundle_err:
-                                self.logger.warning(
-                                    f"[Bundle Sync] Failed to dispatch bundle restore for {p.name}: {bundle_err}"
-                                )
+                            self.logger.info(
+                                f"[Bundle Sync] Retained legacy companion recovery data for {p.name}; "
+                                "native inventory NBT is authoritative, no additive restore was dispatched."
+                            )
 
                         self._ready_players.add(token)
                         self._loading_players.discard(xuid)
@@ -1076,7 +1088,7 @@ class InventorySharePlugin(Plugin):
 
         self.executor.submit(load_inventory_task)
 
-    @event_handler
+    @event_handler(priority=EventPriority.HIGHEST)
     def on_player_quit(self, event: PlayerQuitEvent):
         target = event.player
         xuid, name = target.xuid, target.name

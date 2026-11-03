@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.7.13 — 2026-11-02
+
+- Reject unsupported or changed NBT instead of silently accepting a plain item; preserve the original unresolved payload. Verify real nested bundle contents and custom lore through native item round trips.
+- Retire additive companion restoration and preserve historical companion SQL records. The optional companion becomes read-only diagnostics using stable Script API 2.3.0.
+- Capture shared inventory at HIGHEST quit priority after InventoryUI flushes menus/cursors at LOWEST. Load after optional Backpacks/InventoryUI integrations.
+- Keep the shared session lock when final capture fails, rather than releasing an older snapshot as current. Block handoff while a complete Backpacks save is still pending in its local recovery journal; retry after primary recovery. A marked capture failure requires review of the original server's saved inventory and retained journal.
+- Reuse the byte-identical 2.7.12 native helpers and existing exact Endstone/BDS fingerprint gates. Current local validation is separate from historical release qualification.
+
 ## 2.7.12 - 2026-10-28
 
 - Support Endstone 0.11.15 with BDS 1.26.60.6 / protocol 2225. Rebuild the native inventory synchronization helper against SDK commit `b4aaa87d2c5305e7d340168f824ac2e2ea722e44` and retain exact runtime/fingerprint checks.

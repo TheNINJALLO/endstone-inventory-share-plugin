@@ -1,8 +1,10 @@
 <p align="center"><img src="docs/assets/banner.svg" width="100%" alt="Endstone Inventory Share"></p>
 
-> Endstone 0.11.15 release 2.7.12: This release includes verified Linux and Windows wheels. The recorded validation defines the tested scope.
+> Item-storage safety release **2.7.13** targets Endstone **0.11.15 / BDS 1.26.60.6**. Native typed NBT is authoritative for bundles and lore. Legacy companion records stay in SQL for manual recovery; no additive restore is dispatched. Failed final capture or pending Backpacks recovery holds shared ownership. Keep both recovery journals with server data. Cross-server backpack contents still require the same Backpacks MySQL database on every server. The native helper is unchanged from qualified 2.7.12; current evidence records the checks actually rerun.
 
-# Inventory Share v2.7.12
+# Inventory Share v2.7.13
+
+Download [v2.7.13](https://github.com/TheNINJALLO/endstone-inventory-share-plugin/releases/tag/v2.7.13). Current safety evidence: [2.7.13 validation](docs/validation-2.7.13.md). The 2.7.12 baseline details below are historical.
 
 Share inventories, armor, offhand, ender chests, XP, Money scores, tags, and per-server locations through MySQL/MariaDB. Item NBT and unresolved custom items are preserved in JSON storage.
 
@@ -105,12 +107,12 @@ This update cannot reconstruct items already overwritten by an older release. Re
 |---|---|
 | Endstone | `0.11.15`, API `0.11` |
 | BDS | Exactly `1.26.60.6` x86-64, Windows or Linux; executable SHA-256 checked at startup |
-| Python | CPython `>=3.10`; stable-ABI native wheel; live tested on Windows 3.11 and Linux 3.13/3.14 |
+| Python | CPython `>=3.11`; stable-ABI native wheel. Historical native qualification and current candidate checks are recorded separately. |
 | Linux OS | glibc 2.35 or newer (Ubuntu 22.04 build); Alpine/musl is unsupported |
 | Database | MySQL/MariaDB with InnoDB; tests use MariaDB `11.4` |
 | Commands | Saving/restoring is automatic; `invshare recoverlegacy` is console-only |
 
-The optional bundle companion remains version/API dependent. Its Script API fallback and custom behavior-pack items were not part of this release's live validation; do not assume bundle contents are portable when the companion reports that they are inaccessible. Standard item NBT, names, lore, and durability are covered by the live test.
+Bundle contents use the complete native typed NBT snapshot. The optional 2.7.13 companion performs read-only diagnostics; it never reconstructs or adds inventory items. Legacy companion records remain in SQL for manual recovery and are not automatically applied over newer inventory data. The local safety review verifies real filled and nested vanilla bundles, including lore set by the Essentials handler; arbitrary custom behavior packs still require their own checks.
 
 ## Development and releases
 

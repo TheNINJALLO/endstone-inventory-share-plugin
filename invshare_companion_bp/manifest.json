@@ -2,17 +2,17 @@
     "format_version": 2,
     "header": {
         "name": "InvShare Bundle Companion",
-        "description": "Companion addon for the Endstone Inventory Share plugin. Reads bundle contents via the Script API and relays them to Endstone for cross-server synchronization.",
+        "description": "Optional read-only bundle diagnostics. Native item NBT handles inventory synchronization; legacy additive restoration is disabled.",
         "uuid": "a3b7c1d5-e9f0-4a2b-8c6d-1e3f5a7b9d0c",
         "version": [
             2,
             7,
-            2
+            13
         ],
         "min_engine_version": [
             1,
-            21,
-            40
+            26,
+            60
         ]
     },
     "modules": [
@@ -24,14 +24,14 @@
             "version": [
                 2,
                 7,
-                2
+                13
             ]
         }
     ],
     "dependencies": [
         {
             "module_name": "@minecraft/server",
-            "version": "beta"
+            "version": "2.3.0"
         }
     ]
 }

@@ -36,6 +36,7 @@ def main():
     parser.add_argument("--extra-plugin", type=Path, action="append", default=[],
                         help="Install an additional wheel in the disposable server for coexistence checks")
     args = parser.parse_args()
+    database_password = os.environ.get('INVSHARE_LIVE_DB_PASSWORD', '')
     for wheel in args.extra_plugin:
         if not wheel.is_file() or wheel.suffix != ".whl":
             parser.error("Each extra plugin must be an existing wheel")
@@ -105,6 +106,8 @@ def main():
         phase_output = output / f"{index + 1}-{phase}"
         phase_output.mkdir()
         env = boot._endstone_runtime_env.copy()
+        if args.extra_plugin:
+            env['PIP_FIND_LINKS'] = (server / 'plugins').as_uri()
         env.update(PYTHONPATH=str(probe) + os.pathsep + env["PYTHONPATH"],
                    INVSHARE_PROBE_PREFIX=sys.prefix, PYTHONNOUSERSITE="1",
                    INVSHARE_PLUGIN_PREFIX=str(server / "plugins"),
@@ -160,7 +163,7 @@ def main():
             if phase in {"legacy-null", "legacy-empty"}:
                 assert any("Automatically recovered legacy inventory lock" in line for line in lines)
                 result["automatic_legacy_recovery_verified"] = True
-            conn = pymysql.connect(host=args.db_host, port=args.db_port, user="root", database=args.database)
+            conn = pymysql.connect(host=args.db_host, port=args.db_port, user="root", password=database_password, database=args.database)
             try:
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT player_inv,player_enderchest,player_xp_level,is_logged_in,session_token FROM player_data")

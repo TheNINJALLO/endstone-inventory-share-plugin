@@ -22,7 +22,7 @@ class Probe(InventorySharePlugin):
     def load_config(self):
         self.sql_host = os.environ.get("INVSHARE_LIVE_DB_HOST", "127.0.0.1")
         self.sql_port = int(os.environ["INVSHARE_LIVE_DB_PORT"])
-        self.sql_user, self.sql_pass = "root", ""
+        self.sql_user, self.sql_pass = "root", os.environ.get('INVSHARE_LIVE_DB_PASSWORD', '')
         self.sql_db_name = os.environ.get("INVSHARE_LIVE_DATABASE", "invshare_live")
         self.server_name, self.autosave_seconds = "test-server", 30
 
@@ -132,6 +132,12 @@ class Probe(InventorySharePlugin):
         meta.damage = 7
         sword.set_item_meta(meta)
         player.inventory.set_item(8, sword)
+        bundle_fixture = os.environ.get('INVSHARE_LIVE_BUNDLE_FIXTURE')
+        if bundle_fixture:
+            from endstone_inventory_share_plugin.inventory_share_plugin import deserialize_item
+            bundle = deserialize_item(json.loads(Path(bundle_fixture).read_text(encoding='utf-8')))
+            assert bundle is not None, 'Actual Script API bundle fixture did not restore'
+            player.inventory.set_item(2, bundle)
         player.inventory.helmet = ItemStack("minecraft:diamond_helmet", 1)
         player.inventory.item_in_off_hand = ItemStack("minecraft:shield", 1)
         player.ender_chest.set_item(4, ItemStack("minecraft:emerald", count - 3))

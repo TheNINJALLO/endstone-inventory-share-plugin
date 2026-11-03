@@ -67,7 +67,11 @@ This does not recover inventories already rolled back by an earlier release. For
 
 Force-killing the process does not run a shutdown hook. The last completed periodic snapshot is recoverable, but later changes may be lost. OS signals and third-party code calling the shutdown API directly can also bypass the `stop` command capture. Ask those integrations to issue the native console command. The autosave interval is measured in server ticks; lag, disk failures, and long database queues can extend it.
 
-The companion's Script API bundle fallback is asynchronous and version dependent. It is not a substitute for a complete native NBT snapshot. Keep existing behavior packs and validate their custom items separately.
+In 2.7.13, complete native typed NBT is authoritative for bundle contents. Additive companion restoration is disabled, and the optional companion performs read-only diagnostics. Historical `player_bundles` records remain in SQL for manual inspection; a stale record must not overwrite newer native contents or add a second bundle.
+
+If a final capture fails, the retained journal entry is marked `capture_failed` and its session remains locked. Review the owning server's saved player inventory and the last complete journal snapshot before resolving it; the tokenless `recoverlegacy` command deliberately cannot clear a token-owned session. Never delete the journal or clear the SQL token just to bypass this guard.
+
+Backpacks 1.0.94 retains failed writes in `backpacks.recovery.sqlite3`. Inventory Share waits for those owned backpack snapshots to replay before releasing the shared inventory session. Preserve both journals with the owning server's data. All servers still need the same Backpacks MySQL database for cross-server backpack contents; separate local files are independent stores.
 
 ## Offhand or armor cannot be equipped after restore
 

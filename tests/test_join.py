@@ -130,6 +130,17 @@ def test_legacy_lock_recovery_logs_and_restores_without_kick(plugin, caplog):
     plugin.store.save.assert_not_called()
 
 
+def test_stale_companion_snapshot_cannot_add_another_bundle(plugin):
+    player, callbacks = setup_join(plugin)
+    plugin.store.claim.return_value['player_bundles'] = '{"bundles":[{"slot":0,"type":"minecraft:blue_bundle","contents":[]}]}'
+    plugin.fake_server.dispatch_command = Mock()
+    plugin._begin_join(player)
+    drain(plugin)
+    callbacks.pop(0)()
+    assert plugin._sessions[player.xuid] in plugin._ready_players
+    plugin.fake_server.dispatch_command.assert_not_called()
+
+
 def test_database_credentials_error_is_not_retried(plugin):
     import pymysql
     player, callbacks = setup_join(plugin)

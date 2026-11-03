@@ -1,0 +1,360 @@
+{
+  "date": "2026-11-02",
+  "production_data_accessed": false,
+  "production_restarted": false,
+  "target": {
+    "endstone": "0.11.15",
+    "bds": "1.26.60.6",
+    "protocol": 2225
+  },
+  "versions": {
+    "backpacks": "1.0.94",
+    "inventoryui": "2.0.10",
+    "inventory_share": "2.7.13",
+    "inventory_manager": "1.0.18"
+  },
+  "python_suites": [
+    {
+      "repo": "endstone-backpacks",
+      "exit_code": 0,
+      "summary": "..................................................                       [100%]\n============================== warnings summary ===============================\n..\\endstone-inventoryui-main\\src\\endstone_inventoryui\\menu\\menu_type.py:7\n  <review-workspace>\\endstone-inventoryui-main\\src\\endstone_inventoryui\\menu\\menu_type.py:7: DeprecationWarning: In 3.13 classes created inside an enum will not become a member.  Use the `member` decorator to keep the current behavior.\n    class Value:\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n50 passed, 1 warning in 0.97s"
+    },
+    {
+      "repo": "endstone-inventory-manager",
+      "exit_code": 0,
+      "summary": "...                                                                      [100%]\n============================== warnings summary ===============================\n..\\endstone-inventoryui-main\\src\\endstone_inventoryui\\menu\\menu_type.py:7\n  <review-workspace>\\endstone-inventoryui-main\\src\\endstone_inventoryui\\menu\\menu_type.py:7: DeprecationWarning: In 3.13 classes created inside an enum will not become a member.  Use the `member` decorator to keep the current behavior.\n    class Value:\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n3 passed, 1 warning in 0.25s"
+    },
+    {
+      "repo": "endstone-inventory-share",
+      "exit_code": 0,
+      "summary": ".................................................................        [100%]\n65 passed, 23 deselected in 2.47s"
+    },
+    {
+      "repo": "endstone-inventoryui-main",
+      "exit_code": 0,
+      "summary": "......................                                                   [100%]\n============================== warnings summary ===============================\nsrc\\endstone_inventoryui\\menu\\menu_type.py:7\n  <review-workspace>\\endstone-inventoryui-main\\src\\endstone_inventoryui\\menu\\menu_type.py:7: DeprecationWarning: In 3.13 classes created inside an enum will not become a member.  Use the `member` decorator to keep the current behavior.\n    class Value:\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n22 passed, 1 warning in 0.52s"
+    }
+  ],
+  "python_tests_passed": 140,
+  "mysql_tests_passed": 23,
+  "live_windows": {
+    "nested_bundle_and_fault_checks": {
+      "checks": [
+        "Script API populated real nested bundles and Essentials added custom lore",
+        "backpacks: actual bundle contents and all lore preserved",
+        "sharing: actual bundle contents and all lore preserved",
+        "clone: actual bundle contents and all lore preserved",
+        "sqlite: actual bundle contents and all lore preserved",
+        "enderchest: actual bundle contents and all lore preserved",
+        "mysql: actual bundle contents and all lore preserved",
+        "full journal rejects a real deposit and restores both inventory sides",
+        "real menu deposit checkpoints filled bundle before close",
+        "real menu close/reopen/withdraw preserves nested contents and Essentials lore",
+        "Inventory Share keeps its SQL ownership lock while the backpack save is pending",
+        "failed primary save retains the complete bundle, freezes moves and replays before withdrawal"
+      ],
+      "baseline": {
+        "type": "minecraft:blue_bundle",
+        "amount": 1,
+        "name": "Bundle safety fixture",
+        "lore": [
+          "\u00a7aOriginal bundle lore",
+          "Unicode \u2714",
+          "\u00a7dEssentials Owner: Ninja \u2714"
+        ],
+        "contents": [
+          {
+            "slot": 0,
+            "type": "minecraft:diamond",
+            "amount": 7,
+            "name": "Quest diamonds",
+            "lore": [
+              "\u00a7dInner item lore",
+              "Keep all seven"
+            ]
+          },
+          {
+            "slot": 1,
+            "type": "minecraft:red_bundle",
+            "amount": 1,
+            "name": "Nested treasure",
+            "lore": [
+              "Nested lore survives"
+            ],
+            "contents": [
+              {
+                "slot": 0,
+                "type": "minecraft:emerald",
+                "amount": 5,
+                "name": "",
+                "lore": []
+              }
+            ]
+          }
+        ]
+      },
+      "passed": true,
+      "server_exit": 0
+    },
+    "inventory_checks": {
+      "block": {
+        "checks": [
+          "assigned backpack opens through real block interaction",
+          "chest menu open acknowledged and contents decoded",
+          "deposit and withdraw conserve named items",
+          "next and previous page actions preserve contents",
+          "SQLite close and reopen preserve contents and metadata",
+          "stop with an open backpack flushes SQLite without a crash"
+        ],
+        "interaction": "block",
+        "tier": "gigantic",
+        "legacy_material": true,
+        "wheel_sha256": {
+          "endstone_inventoryui-2.0.10-py3-none-any.whl": "c123e7403bdacd26aa816383523d3bf5ced3755daa4768eb084a4b2352374fc9",
+          "endstone_inventory_manager-1.0.18-py3-none-any.whl": "830356310747536bd21dbae47065cd87c3c66b1143a4fc3cfd24940e23a28f2c",
+          "endstone_ninjos_backpacks-1.0.94-py3-none-any.whl": "3ebab44e2966505e588bd9e6726f843824e03e748808e51a2412f667be53b5cd"
+        },
+        "server_exit": 0,
+        "passed": true
+      },
+      "vault": {
+        "checks": [
+          "chest menu open acknowledged and contents decoded",
+          "cursor partial deposit preserves remainder and custom NBT",
+          "virtual vault merge, withdrawal, and both page buttons conserve 112 items",
+          "stop with an open backpack flushes SQLite without a crash"
+        ],
+        "interaction": null,
+        "tier": "gigantic",
+        "legacy_material": false,
+        "wheel_sha256": {
+          "endstone_inventoryui-2.0.10-py3-none-any.whl": "c123e7403bdacd26aa816383523d3bf5ced3755daa4768eb084a4b2352374fc9",
+          "endstone_inventory_manager-1.0.18-py3-none-any.whl": "830356310747536bd21dbae47065cd87c3c66b1143a4fc3cfd24940e23a28f2c",
+          "endstone_ninjos_backpacks-1.0.94-py3-none-any.whl": "3ebab44e2966505e588bd9e6726f843824e03e748808e51a2412f667be53b5cd"
+        },
+        "server_exit": 0,
+        "passed": true
+      }
+    },
+    "inventory_share_lifecycle_phases": [
+      "seed",
+      "restore",
+      "crash",
+      "restore",
+      "transient",
+      "handoff",
+      "recovery",
+      "legacy-null",
+      "legacy-empty",
+      "metadata"
+    ],
+    "lifecycle_wheel_sha256": "75ced71ee22e48fc4389f8ecefb78ced7fbccaab4c3a86770280dbddf0eef249",
+    "lifecycle_scope": "Ten phases validate Inventory Share and the captured native bundle tree. The first phase had auxiliary module-import errors; subsequent phases loaded the extra plugins. The separate 12-check run loads all four actual wheels successfully."
+  },
+  "artifacts": [
+    {
+      "repo": "endstone-inventoryui-main",
+      "wheel": "<review-workspace>\\.item-safety-26.60-review\\artifacts\\python\\endstone_inventoryui-2.0.10-py3-none-any.whl",
+      "sha256": "c123e7403bdacd26aa816383523d3bf5ced3755daa4768eb084a4b2352374fc9"
+    },
+    {
+      "repo": "endstone-inventory-manager",
+      "wheel": "<review-workspace>\\.item-safety-26.60-review\\artifacts\\python\\endstone_inventory_manager-1.0.18-py3-none-any.whl",
+      "sha256": "830356310747536bd21dbae47065cd87c3c66b1143a4fc3cfd24940e23a28f2c"
+    },
+    {
+      "repo": "endstone-inventory-share",
+      "platform": "windows",
+      "wheel": "<review-workspace>\\.item-safety-26.60-review\\artifacts\\windows\\endstone_inventory_share_plugin-2.7.13-cp310-abi3-win_amd64.whl",
+      "sha256": "75ced71ee22e48fc4389f8ecefb78ced7fbccaab4c3a86770280dbddf0eef249",
+      "native_sha256": "51ab8df83e200d5b17ba57497919b575d0eed9b6cb9d54ee9e6d10dff0db4555",
+      "native_reused_from": "qualified 2.7.12 release; source/runtime guards unchanged"
+    },
+    {
+      "repo": "endstone-inventory-share",
+      "platform": "linux",
+      "wheel": "<review-workspace>\\.item-safety-26.60-review\\artifacts\\linux\\endstone_inventory_share_plugin-2.7.13-cp310-abi3-linux_x86_64.whl",
+      "sha256": "6953625f7a2d313c5ccb384ee676a45fd25685312105546f4a1d2044785b10b1",
+      "native_sha256": "343a5671785184e9372b2f48751cb7a70d582641768b4efbdd48936155e18156",
+      "native_reused_from": "qualified 2.7.12 release; source/runtime guards unchanged"
+    },
+    {
+      "repo": "endstone-backpacks",
+      "wheel": "<review-workspace>\\.item-safety-26.60-review\\artifacts\\python\\endstone_ninjos_backpacks-1.0.94-py3-none-any.whl",
+      "sha256": "3ebab44e2966505e588bd9e6726f843824e03e748808e51a2412f667be53b5cd"
+    }
+  ],
+  "staged": [
+    {
+      "repo": "endstone-inventoryui-main",
+      "file": "endstone_inventoryui-2.0.10-py3-none-any.whl",
+      "sha256": "c123e7403bdacd26aa816383523d3bf5ced3755daa4768eb084a4b2352374fc9"
+    },
+    {
+      "repo": "endstone-inventory-manager",
+      "file": "endstone_inventory_manager-1.0.18-py3-none-any.whl",
+      "sha256": "830356310747536bd21dbae47065cd87c3c66b1143a4fc3cfd24940e23a28f2c"
+    },
+    {
+      "repo": "endstone-inventory-share",
+      "file": "endstone_inventory_share_plugin-2.7.13-cp310-abi3-win_amd64.whl",
+      "sha256": "75ced71ee22e48fc4389f8ecefb78ced7fbccaab4c3a86770280dbddf0eef249"
+    },
+    {
+      "repo": "endstone-backpacks",
+      "file": "endstone_ninjos_backpacks-1.0.94-py3-none-any.whl",
+      "sha256": "3ebab44e2966505e588bd9e6726f843824e03e748808e51a2412f667be53b5cd"
+    }
+  ],
+  "wheel_verification": {
+    "wheels": [
+      {
+        "file": "endstone_inventoryui-2.0.10-py3-none-any.whl",
+        "modules_verified": 65,
+        "sha256": "c123e7403bdacd26aa816383523d3bf5ced3755daa4768eb084a4b2352374fc9"
+      },
+      {
+        "file": "endstone_inventory_manager-1.0.18-py3-none-any.whl",
+        "modules_verified": 3,
+        "sha256": "830356310747536bd21dbae47065cd87c3c66b1143a4fc3cfd24940e23a28f2c"
+      },
+      {
+        "file": "endstone_inventory_share_plugin-2.7.13-cp310-abi3-win_amd64.whl",
+        "modules_verified": 4,
+        "sha256": "75ced71ee22e48fc4389f8ecefb78ced7fbccaab4c3a86770280dbddf0eef249"
+      },
+      {
+        "file": "endstone_inventory_share_plugin-2.7.13-cp310-abi3-linux_x86_64.whl",
+        "modules_verified": 4,
+        "sha256": "6953625f7a2d313c5ccb384ee676a45fd25685312105546f4a1d2044785b10b1"
+      },
+      {
+        "file": "endstone_ninjos_backpacks-1.0.94-py3-none-any.whl",
+        "modules_verified": 16,
+        "sha256": "3ebab44e2966505e588bd9e6726f843824e03e748808e51a2412f667be53b5cd"
+      }
+    ],
+    "diff_checks": [
+      "endstone-backpacks",
+      "endstone-inventory-manager",
+      "endstone-inventory-share",
+      "endstone-inventoryui-main"
+    ]
+  },
+  "live_linux": {
+    "nested_bundle_and_fault_checks": {
+      "checks": [
+        "Script API populated real nested bundles and Essentials added custom lore",
+        "backpacks: actual bundle contents and all lore preserved",
+        "sharing: actual bundle contents and all lore preserved",
+        "clone: actual bundle contents and all lore preserved",
+        "sqlite: actual bundle contents and all lore preserved",
+        "enderchest: actual bundle contents and all lore preserved",
+        "mysql: actual bundle contents and all lore preserved",
+        "full journal rejects a real deposit and restores both inventory sides",
+        "real menu deposit checkpoints filled bundle before close",
+        "real menu close/reopen/withdraw preserves nested contents and Essentials lore",
+        "Inventory Share keeps its SQL ownership lock while the backpack save is pending",
+        "failed primary save retains the complete bundle, freezes moves and replays before withdrawal"
+      ],
+      "baseline": {
+        "type": "minecraft:blue_bundle",
+        "amount": 1,
+        "name": "Bundle safety fixture",
+        "lore": [
+          "\u00a7aOriginal bundle lore",
+          "Unicode \u2714",
+          "\u00a7dEssentials Owner: Ninja \u2714"
+        ],
+        "contents": [
+          {
+            "slot": 0,
+            "type": "minecraft:diamond",
+            "amount": 7,
+            "name": "Quest diamonds",
+            "lore": [
+              "\u00a7dInner item lore",
+              "Keep all seven"
+            ]
+          },
+          {
+            "slot": 1,
+            "type": "minecraft:red_bundle",
+            "amount": 1,
+            "name": "Nested treasure",
+            "lore": [
+              "Nested lore survives"
+            ],
+            "contents": [
+              {
+                "slot": 0,
+                "type": "minecraft:emerald",
+                "amount": 5,
+                "name": "",
+                "lore": []
+              }
+            ]
+          }
+        ]
+      },
+      "passed": true,
+      "server_exit": 0
+    },
+    "installed_wheel_verification": {
+      "python": "3.14.7 (main, Sep  1 2026, 14:18:09) [Clang 22.1.3 ]",
+      "wheels": [
+        {
+          "file": "endstone_inventoryui-2.0.10-py3-none-any.whl",
+          "sha256": "c123e7403bdacd26aa816383523d3bf5ced3755daa4768eb084a4b2352374fc9",
+          "installed_files_verified": 65
+        },
+        {
+          "file": "endstone_ninjos_backpacks-1.0.94-py3-none-any.whl",
+          "sha256": "3ebab44e2966505e588bd9e6726f843824e03e748808e51a2412f667be53b5cd",
+          "installed_files_verified": 16
+        },
+        {
+          "file": "endstone_inventory_manager-1.0.18-py3-none-any.whl",
+          "sha256": "830356310747536bd21dbae47065cd87c3c66b1143a4fc3cfd24940e23a28f2c",
+          "installed_files_verified": 3
+        },
+        {
+          "file": "endstone_inventory_share_plugin-2.7.13-cp310-abi3-linux_x86_64.whl",
+          "sha256": "6953625f7a2d313c5ccb384ee676a45fd25685312105546f4a1d2044785b10b1",
+          "installed_files_verified": 5
+        }
+      ]
+    }
+  },
+  "native_reuse": "Both bridge binaries are byte-identical to qualified 2.7.12; exact SDK/runtime fingerprint guards retained.",
+  "linux_qualification": "All four actual candidate wheels passed the twelve nested-bundle and fault checks on Linux BDS 1.26.60.6 / Endstone 0.11.15. Installed source/native bytes verified. The separate ten-phase process lifecycle suite ran on Windows.",
+  "essentials_scope": "Actual itemlore handler applied to a real native item with only target selection adapted; complete Essentials deployment not rerun.",
+  "production_backpack_database_layout": "User confirms all servers share the same Backpacks MySQL database.",
+  "original_missing_items_recovered": false,
+  "limitations": [
+    "Production loss cause has not been established from user data or logs.",
+    "Already discarded items/metadata require an existing backup or retained recovery record.",
+    "Virtual storage reconciles on the following tick; arbitrary world/plugin-database crash atomicity is not guaranteed.",
+    "Existing duplicate manageinv command registration between Backpacks and Inventory Manager remains outside these item-safety fixes.",
+    "Retail clients, arbitrary custom behavior-pack items and distributed concurrent backpack editing were not qualified."
+  ],
+  "reported_loss_timing": "After reconnecting or changing servers",
+  "shared_mysql_handoff": {
+    "production_layout": "User confirms all Backpacks servers share MySQL",
+    "reported_timing": "After reconnecting or changing servers",
+    "checks": [
+      "Independent server stores read the same complete bundle/lore from shared MySQL",
+      "Delayed save callbacks from departed server A cannot overwrite server B",
+      "Second server cannot claim the player while the first session still owns inventory",
+      "Same-server reconnect reloads MySQL and rejects callbacks from the prior menu",
+      "Preserved pre-fix source reproduces a late empty save wiping newer shared contents",
+      "Shared handoff remains blocked during a pending backpack save",
+      "Recovery completes both snapshots before destination restores the bundle, without duplication"
+    ],
+    "legacy_empty_overwrite_reproduced": true,
+    "legacy_source_sha256": "a3172792ae51fa1379d2739f74f05b6ed568ab5d02074d354d91c1002b304881",
+    "passed": true
+  },
+  "runtime_code_changed_in_handoff_followup": false,
+  "evidence_recorded_before_publication": true
+}

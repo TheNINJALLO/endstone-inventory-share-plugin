@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import sqlite3
 import threading
+from urllib.parse import quote
 
 import pymysql
 
@@ -18,6 +19,23 @@ class SessionBusy(RuntimeError):
 
 class StaleSession(RuntimeError):
     pass
+
+
+def require_complete_storage(data):
+    """Do not release shared ownership ahead of a failed final/storage save."""
+    if data is None:
+        return
+    if data.get('capture_failed'):
+        raise SessionBusy('Final inventory capture failed; original session requires recovery')
+    for barrier in data.get('storage_barriers', []):
+        path = Path(barrier['journal']).resolve().as_posix()
+        db = sqlite3.connect('file:' + quote(path, safe='/:') + '?mode=ro', uri=True, timeout=5)
+        try:
+            for storage_id in barrier['storage_ids']:
+                if db.execute('SELECT 1 FROM pending WHERE storage_id=?', (storage_id,)).fetchone():
+                    raise SessionBusy('Backpack save is still awaiting primary database recovery')
+        finally:
+            db.close()
 
 
 def retryable_load_error(error):
@@ -192,6 +210,7 @@ def recover_pending(store, journal, logger, *, entries=None):
     failures = 0
     for token, xuid, data in journal.entries() if entries is None else entries:
         try:
+            require_complete_storage(data)
             store.save(xuid, token, data, release=True)
         except StaleSession:
             # A committed release or a newer owner makes this journal obsolete.

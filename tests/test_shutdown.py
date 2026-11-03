@@ -137,7 +137,10 @@ def test_capture_failure_keeps_last_complete_snapshot(plugin, snapshot):
     ready(plugin, snapshot)
     plugin._extract_player_data.side_effect = RuntimeError("unavailable inventory")
     plugin.on_disable()
-    plugin.store.save.assert_called_once_with("123", "session", snapshot, release=True)
+    plugin.store.save.assert_not_called()
+    saved = plugin.journal.entries()[0][2]
+    assert saved['inv_json'] == snapshot['inv_json']
+    assert saved['capture_failed'] is True
 
 
 def test_quit_preserves_optional_fields_after_removing_session_mapping(plugin, snapshot):
