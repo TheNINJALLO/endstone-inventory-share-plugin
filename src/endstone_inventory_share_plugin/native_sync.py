@@ -10,8 +10,8 @@ import sys
 # Exact server binaries used by the release's live tests. Private BDS virtual
 # calls must not run on an unqualified binary merely because an API version fits.
 PROFILES = {
-    "linux": ("inventory_sync.so", "ea16b541a448e07c337848d2c5f37321b706554b5216dd942f3f11e7a8ed2bad"),
-    "win32": ("inventory_sync.dll", "d7b26d6c5e8f3e910f66e8cbf7e1dfde06e570032349bf7abdd070deb6e9d884"),
+    "linux": ("inventory_sync.so", "ae606d06f9803b4e56b6af7ae15fdc149736fb27096221a0ec082881e897b067"),
+    "win32": ("inventory_sync.dll", "1dd638ca380b1f30156a814e7bf568932f04f977b504601817961f782609dc4e"),
 }
 _library = None
 
@@ -35,16 +35,16 @@ def ensure_native():
     if _library is not None:
         return _library
     if sys.platform not in PROFILES or platform.machine().lower() not in {"amd64", "x86_64"}:
-        raise RuntimeError("Inventory Share requires Windows/Linux x86-64 BDS 1.26.60.6")
-    if version("endstone") not in {"0.11.15"}:
-        raise RuntimeError("Inventory refresh requires Endstone 0.11.15 with BDS 1.26.60.6")
+        raise RuntimeError("Inventory Share requires Windows/Linux x86-64 BDS 1.26.65.1")
+    if version("endstone") not in {"0.11.16"}:
+        raise RuntimeError("Inventory refresh requires Endstone 0.11.16 with BDS 1.26.65.1")
     filename, expected = PROFILES[sys.platform]
     digest = hashlib.sha256()
     with _executable().open("rb") as executable:
         for chunk in iter(lambda: executable.read(1024 * 1024), b""):
             digest.update(chunk)
     if digest.hexdigest() != expected:
-        raise RuntimeError("Unsupported Bedrock binary for native inventory refresh; use the qualified BDS 1.26.60.6 build")
+        raise RuntimeError("Unsupported Bedrock binary for native inventory refresh; use the qualified BDS 1.26.65.1 build")
     # PyDLL retains the GIL, propagates CPython errors, and allows native send
     # callbacks to enter Endstone's Python packet listeners on the server thread.
     library = ctypes.PyDLL(str(Path(__file__).parent / "_native" / filename))

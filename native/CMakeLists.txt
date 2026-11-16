@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.29)
-project(inventory_sync VERSION 0.11.15 LANGUAGES CXX)
+project(inventory_sync VERSION 0.11.16 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(FetchContent)
-# Endstone v0.11.15, BDS 1.26.60.6. Compile against the exact runtime SDK.
+# Endstone v0.11.16, BDS 1.26.65.1. Compile against the exact runtime SDK.
 FetchContent_Declare(endstone
     GIT_REPOSITORY https://github.com/EndstoneMC/endstone.git
-    GIT_TAG b4aaa87d2c5305e7d340168f824ac2e2ea722e44
+    GIT_TAG 23cb5758bdc070888cb89ecd1541ef25c4305b5c
     SOURCE_SUBDIR inventory-sync-no-subproject)
 FetchContent_MakeAvailable(endstone)
 find_package(Python3 COMPONENTS Interpreter Development.SABIModule REQUIRED)
@@ -31,7 +31,7 @@ endif()
 # Keep the pinned SDK checkout untouched, including when supplied read-only.
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/bedrock/platform")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/include/bedrock/platform/result.h" "${result_text}")
-set(ENDSTONE_VERSION_FULL "0.11.15")
+set(ENDSTONE_VERSION_FULL "0.11.16")
 configure_file("${endstone_SOURCE_DIR}/include/endstone/version.h.in" "include/endstone/version.h" @ONLY)
 
 add_library(inventory_sync SHARED refresh.cpp
