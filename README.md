@@ -1,3 +1,5 @@
+> Compatibility update **2.7.14** targets **Endstone 0.11.16 / BDS 1.26.65.1**, protocol **2225**, Python **3.11+**. API level remains **0.11**. Keep configuration and player data when replacing the wheel. Earlier acceptance records below describe their original builds; current qualification is tracked in the workspace upgrade report.
+
 <p align="center"><img src="docs/assets/banner.svg" width="100%" alt="Endstone Inventory Share"></p>
 
 > Item-storage safety release **2.7.13** targets Endstone **0.11.15 / BDS 1.26.60.6**. Native typed NBT is authoritative for bundles and lore. Legacy companion records stay in SQL for manual recovery; no additive restore is dispatched. Failed final capture or pending Backpacks recovery holds shared ownership. Keep both recovery journals with server data. Cross-server backpack contents still require the same Backpacks MySQL database on every server. The native helper is unchanged from qualified 2.7.12; current evidence records the checks actually rerun.

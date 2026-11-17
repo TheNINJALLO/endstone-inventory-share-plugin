@@ -1,0 +1,44 @@
+name: Publish qualified Endstone 0.11.16 wheels
+
+'on':
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify qualification and unchanged runtime sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api repos/${{ github.repository }}/actions/runs/43980586607 --jq .conclusion)" = success
+          test "$(gh api repos/${{ github.repository }}/actions/runs/43980586607 --jq .head_sha)" = d14c9632ab31e49847b9911b90922bac57ccc362
+          git diff --exit-code d14c9632ab31e49847b9911b90922bac57ccc362 "$GITHUB_SHA" -- src native pyproject.toml hatch_build.py scripts/build_native.py
+      - name: Download the qualified platform wheels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 43980586607 --name wheel-win_amd64 --dir dist
+          gh run download 43980586607 --name wheel-linux_x86_64 --dir dist
+          sha256sum dist/*.whl > dist/SHA256SUMS
+      - name: Publish verified platform wheels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view v2.7.14 >/dev/null 2>&1; then
+            echo 'Release already exists; preserving its qualified artifacts.'
+            exit 0
+          fi
+          gh release create v2.7.14 --draft --target "$GITHUB_SHA" --title v2.7.14 --notes-file docs/releases/v2.7.14.md
+          gh release upload v2.7.14 dist/*.whl dist/SHA256SUMS
+          gh release edit v2.7.14 --draft=false --latest

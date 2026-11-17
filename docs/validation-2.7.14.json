@@ -1,0 +1,25 @@
+{
+  "platform": "win32",
+  "python": "3.12.14",
+  "wheel_sha256": "22be67d80250c075ff21c2784a10c0818e6509e312278ead36d5beb29c4cfc9e",
+  "checks": [
+    "baseline: totem and all four armor slots equip/unequip with native IDs",
+    "identical restore: full inventory, totem, shield, four armor slots, names and lore preserved",
+    "occupied equipment survives restore and remains movable",
+    "different local inventory replaced, native client updates allow all equipment actions",
+    "empty snapshot clears every slot and subsequent equipment works"
+  ],
+  "server_exit": 0,
+  "passed": true,
+  "endstone": "0.11.16",
+  "bedrock": "1.26.65.1",
+  "protocol": 2225,
+  "ci_run": 43980586607,
+  "ci_windows_linux_builds": true,
+  "python_mariadb_matrix": [
+    "3.11",
+    "3.13",
+    "3.14"
+  ],
+  "scope": "Real Windows BDS equipment/restore checks with the exact CI wheel and an automated protocol client. Retail client and Linux equipment checks were not run."
+}
